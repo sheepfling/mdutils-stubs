@@ -1,0 +1,72 @@
+[build-system]
+requires = ["setuptools>=80", "setuptools-scm>=9.2", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mdutils-stubs"
+dynamic = ["version"]
+description = "PEP 561 type stubs for mdutils."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{name = "sheepfling"}]
+requires-python = ">=3.10,<4.0"
+dependencies = ["mdutils==1.8.1"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Typing :: Stubs Only",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.2",
+    "mypy>=2.3",
+    "pre-commit>=4.0",
+    "pyright>=1.1.414",
+    "ruff>=0.16",
+    "twine>=7.0",
+    "typing_extensions>=4.0",
+]
+
+[project.urls]
+Repository = "https://github.com/sheepfling/mdutils-stubs"
+Issues = "https://github.com/sheepfling/mdutils-stubs/issues"
+mdutils = "https://github.com/didix21/mdutils"
+
+[tool.setuptools]
+packages = ["mdutils-stubs", "mdutils-stubs.fileutils", "mdutils-stubs.tools"]
+
+[tool.setuptools.package-data]
+"mdutils-stubs" = ["*.pyi"]
+"mdutils-stubs.fileutils" = ["*.pyi"]
+"mdutils-stubs.tools" = ["*.pyi"]
+
+[tool.setuptools_scm]
+fallback_version = "0.0.0"
+version_scheme = "release-branch-semver"
+local_scheme = "no-local-version"
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["tests/fixtures/positive.py"]
+
+[tool.pyright]
+include = ["tests/fixtures/positive.py"]
+pythonVersion = "3.10"
+typeCheckingMode = "strict"
+reportMissingModuleSource = "none"
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
