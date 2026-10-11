@@ -1,122 +1,127 @@
-"""Portability tests for the typing-fixture subprocess runner."""
+"""Pytest coverage for the shell-free typing-fixture runner."""
 
 from __future__ import annotations
 
-import importlib.util
 import subprocess
 import sys
-import unittest
 from collections.abc import Sequence
-from contextlib import redirect_stderr, redirect_stdout
-from io import StringIO
 from pathlib import Path
-from unittest.mock import patch
+
+import pytest
+
+from tests import check_typing_fixtures as runner
 
 ROOT = Path(".")
-RUNNER_PATH = ROOT / "scripts" / "check_typing_fixtures.py"
-SPEC = importlib.util.spec_from_file_location("check_typing_fixtures", RUNNER_PATH)
-if SPEC is None or SPEC.loader is None:
-    raise RuntimeError(f"cannot import typing-fixture runner from {RUNNER_PATH}")
-runner = importlib.util.module_from_spec(SPEC)
-sys.modules[SPEC.name] = runner
-SPEC.loader.exec_module(runner)
+POSITIVE = ROOT / "tests" / "fixtures" / "positive.py"
+NEGATIVE = ROOT / "tests" / "fixtures" / "negative.py"
 
 
-class TypingFixtureRunnerTests(unittest.TestCase):
-    def test_commands_use_python_modules_and_argument_vectors(self) -> None:
-        mypy_command = runner.build_command(
-            runner.CHECKERS[0], runner.POSITIVE_FIXTURE, Path("/tmp/mypy-cache")
-        )
-        pyright_command = runner.build_command(runner.CHECKERS[1], runner.POSITIVE_FIXTURE)
+@pytest.mark.parametrize("checker", runner.CHECKERS, ids=lambda item: item.name)
+def test_commands_use_this_interpreter_and_module_invocations(checker: runner.Checker) -> None:
+    cache = Path("/tmp/mdutils-stubs-cache") if checker.name == "mypy" else None
+    command = runner.build_command(checker, POSITIVE, cache)
 
-        self.assertEqual(mypy_command[:3], [sys.executable, "-m", "mypy"])
-        self.assertEqual(pyright_command[:3], [sys.executable, "-m", "pyright"])
-        self.assertIn("--pythonpath", pyright_command)
-        self.assertEqual(pyright_command[pyright_command.index("--pythonpath") + 1], sys.executable)
-        self.assertTrue(all(isinstance(argument, str) for argument in mypy_command))
-        self.assertTrue(all(isinstance(argument, str) for argument in pyright_command))
-
-    def test_mypy_cache_is_temporary_and_process_uses_no_shell(self) -> None:
-        cache_paths: list[Path] = []
-
-        def fake_run(command: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
-            cache = Path(command[command.index("--cache-dir") + 1])
-            self.assertTrue(cache.is_dir())
-            self.assertEqual(kwargs["cwd"], ROOT)
-            self.assertNotIn("shell", kwargs)
-            cache_paths.append(cache)
-            return subprocess.CompletedProcess(command, 0, "Success: no issues found", "")
-
-        output = StringIO()
-        with patch.object(runner.subprocess, "run", side_effect=fake_run):
-            with redirect_stdout(output):
-                self.assertTrue(
-                    runner.run_case(
-                        runner.CHECKERS[0],
-                        runner.POSITIVE_FIXTURE,
-                        expect_errors=False,
-                    )
-                )
-
-        self.assertEqual(len(cache_paths), 1)
-        self.assertFalse(cache_paths[0].exists())
-        self.assertIn("PASS mypy", output.getvalue())
-
-    def test_negative_contract_requires_seven_errors_and_each_expected_message(self) -> None:
-        for checker in runner.CHECKERS:
-            with self.subTest(checker=checker.name):
-                output = "\n".join(
-                    f"fixture.py:{index}: error: {diagnostic} has wrong type"
-                    for index, diagnostic in enumerate(checker.negative_diagnostics, start=1)
-                )
-                passed = subprocess.CompletedProcess([], 1, output, "")
-                failed_count = subprocess.CompletedProcess([], 1, output.splitlines()[0], "")
-                failed_status = subprocess.CompletedProcess([], 0, "", "")
-
-                self.assertEqual(
-                    runner.evaluate_result(
-                        checker, runner.NEGATIVE_FIXTURE, passed, expect_errors=True
-                    ),
-                    [],
-                )
-                self.assertTrue(
-                    runner.evaluate_result(
-                        checker, runner.NEGATIVE_FIXTURE, failed_count, expect_errors=True
-                    )
-                )
-                self.assertTrue(
-                    runner.evaluate_result(
-                        checker, runner.NEGATIVE_FIXTURE, failed_status, expect_errors=True
-                    )
-                )
-
-    def test_spawn_failure_is_reported_and_mypy_cache_is_cleaned(self) -> None:
-        cache_paths: list[Path] = []
-
-        def failing_run(
-            command: Sequence[str], **kwargs: object
-        ) -> subprocess.CompletedProcess[str]:
-            cache = Path(command[command.index("--cache-dir") + 1])
-            self.assertTrue(cache.is_dir())
-            cache_paths.append(cache)
-            raise OSError("simulated missing interpreter")
-
-        errors = StringIO()
-        with patch.object(runner.subprocess, "run", side_effect=failing_run):
-            with redirect_stderr(errors):
-                self.assertFalse(
-                    runner.run_case(
-                        runner.CHECKERS[0],
-                        runner.POSITIVE_FIXTURE,
-                        expect_errors=False,
-                    )
-                )
-
-        self.assertEqual(len(cache_paths), 1)
-        self.assertFalse(cache_paths[0].exists())
-        self.assertIn("could not start checker", errors.getvalue())
-        self.assertIn("simulated missing interpreter", errors.getvalue())
+    assert command[:3] == [sys.executable, "-m", checker.module]
+    assert all(isinstance(argument, str) for argument in command)
+    if checker.name == "pyright":
+        interpreter_index = command.index("--pythonpath") + 1
+        assert command[interpreter_index] == sys.executable
 
 
-if __name__ == "__main__":
-    unittest.main()
+@pytest.mark.parametrize("checker", runner.CHECKERS, ids=lambda item: item.name)
+def test_positive_contract_requires_zero_exit_and_no_errors(checker: runner.Checker) -> None:
+    passed = subprocess.CompletedProcess([], 0, "Success: no issues found", "")
+    failed = subprocess.CompletedProcess([], 1, "error: rejected", "")
+    diagnostic = subprocess.CompletedProcess([], 0, "error: unexpected", "")
+
+    assert runner.evaluate_result(checker, POSITIVE, passed, expect_errors=False) == []
+    assert runner.evaluate_result(checker, POSITIVE, failed, expect_errors=False)
+    assert runner.evaluate_result(checker, POSITIVE, diagnostic, expect_errors=False)
+
+
+@pytest.mark.parametrize("checker", runner.CHECKERS, ids=lambda item: item.name)
+def test_negative_contract_requires_all_seven_expected_diagnostics(
+    checker: runner.Checker,
+) -> None:
+    output = chr(10).join(
+        f"fixture.py:{index}: error: {diagnostic} has wrong type"
+        for index, diagnostic in enumerate(checker.negative_diagnostics, start=1)
+    )
+    passed = subprocess.CompletedProcess([], 1, output, "")
+    failed_count = subprocess.CompletedProcess([], 1, output.splitlines()[0], "")
+    unexpected_success = subprocess.CompletedProcess([], 0, "", "")
+
+    assert runner.evaluate_result(checker, NEGATIVE, passed, expect_errors=True) == []
+    count_issues = runner.evaluate_result(checker, NEGATIVE, failed_count, expect_errors=True)
+    assert any("expected 7 error diagnostics" in issue for issue in count_issues)
+    assert any("missing expected diagnostics" in issue for issue in count_issues)
+    status_issues = runner.evaluate_result(
+        checker, NEGATIVE, unexpected_success, expect_errors=True
+    )
+    assert any("negative fixture unexpectedly passed" in issue for issue in status_issues)
+
+
+def test_mypy_cache_is_temporary_and_subprocess_uses_no_shell(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    cache_paths: list[Path] = []
+
+    def fake_run(command: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        cache = Path(command[command.index("--cache-dir") + 1])
+        assert cache.is_dir()
+        assert kwargs["cwd"] == ROOT
+        assert kwargs["encoding"] == "utf-8"
+        assert "shell" not in kwargs
+        cache_paths.append(cache)
+        return subprocess.CompletedProcess(command, 0, "Success: no issues found", "")
+
+    monkeypatch.setattr(runner.subprocess, "run", fake_run)
+    assert runner.run_case(runner.CHECKERS[0], POSITIVE, expect_errors=False)
+    assert len(cache_paths) == 1
+    assert not cache_paths[0].exists()
+    assert "PASS mypy positive.py: clean" in capsys.readouterr().out
+
+
+@pytest.mark.parametrize(
+    ("failure", "expected_reason", "expected_output"),
+    [
+        pytest.param(
+            FileNotFoundError("missing checker"),
+            "could not start checker",
+            None,
+            id="spawn-failure",
+        ),
+        pytest.param(
+            subprocess.TimeoutExpired(
+                ["mypy"], 180, output=b"partial stdout", stderr=b"partial stderr"
+            ),
+            "timed out after 180 seconds",
+            "partial stdout" + chr(10) + "partial stderr",
+            id="timeout",
+        ),
+    ],
+)
+def test_failures_are_reported_and_temporary_cache_is_cleaned(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    failure: OSError | subprocess.TimeoutExpired,
+    expected_reason: str,
+    expected_output: str | None,
+) -> None:
+    cache_paths: list[Path] = []
+
+    def failing_run(command: Sequence[str], **kwargs: object) -> subprocess.CompletedProcess[str]:
+        cache = Path(command[command.index("--cache-dir") + 1])
+        assert cache.is_dir()
+        cache_paths.append(cache)
+        raise failure
+
+    monkeypatch.setattr(runner.subprocess, "run", failing_run)
+    assert not runner.run_case(runner.CHECKERS[0], POSITIVE, expect_errors=False)
+    assert len(cache_paths) == 1
+    assert not cache_paths[0].exists()
+    report = capsys.readouterr().err
+    assert expected_reason in report
+    assert "command:" in report
+    if expected_output is not None:
+        assert expected_output in report

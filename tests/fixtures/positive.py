@@ -177,6 +177,60 @@ assert_type(Reference().references, dict[str, str])
 assert_type(Reference().get_references(), dict[str, str])
 assert_type(Reference().get_references_as_markdown(), str)
 assert_type(MDListClass(["one", ["nested", ["deeper"]]], marked_with="-").get_md(), str)
+assert_type(
+    MDListClass(
+        [
+            TextUtilsClass.bold("Important"),
+            [
+                TextUtilsClass.text_external_link("docs", "https://example.com"),
+                Inline.new_link("https://example.com", text="site"),
+                ImageClass.new_inline_image("diagram", "diagram.png"),
+            ],
+        ]
+    ).get_md(),
+    str,
+)
+assert_type(
+    MDCheckbox(
+        [
+            TextUtilsClass.bold("Important"),
+            [
+                TextUtilsClass.text_external_link("docs", "https://example.com"),
+                Inline.new_link("https://example.com", text="site"),
+                ImageClass.new_inline_image("diagram", "diagram.png"),
+            ],
+        ],
+        checked=True,
+    ).get_md(),
+    str,
+)
+assert_type(
+    document.new_list(
+        [
+            TextUtilsClass.bold("Important"),
+            [
+                TextUtilsClass.text_external_link("docs", "https://example.com"),
+                Inline.new_link("https://example.com", text="site"),
+                ImageClass.new_inline_image("diagram", "diagram.png"),
+            ],
+        ]
+    ),
+    None,
+)
+assert_type(
+    document.new_checkbox_list(
+        [
+            TextUtilsClass.bold("Important"),
+            [
+                TextUtilsClass.text_external_link("docs", "https://example.com"),
+                Inline.new_link("https://example.com", text="site"),
+                ImageClass.new_inline_image("diagram", "diagram.png"),
+            ],
+        ],
+        checked=True,
+    ),
+    None,
+)
 assert_type(MDListClass(["one"]).md_list, str)
 assert_type(MDCheckbox(["one", ["nested"]], checked=True).get_md(), str)
 assert_type(MDCheckbox(["one"], checked=True).checked, str)

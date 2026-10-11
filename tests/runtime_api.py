@@ -8,6 +8,8 @@ from tempfile import TemporaryDirectory
 import mdutils
 from mdutils import MdUtils, TextUtils
 from mdutils.fileutils import MarkDownFile
+from mdutils.tools.Image import Image as ImageClass
+from mdutils.tools.Link import Inline
 from mdutils.tools.MDList import MDCheckbox, MDList
 from mdutils.tools.TableOfContents import TableOfContents
 from mdutils.tools.TextUtils import TextUtils as ModuleTextUtils
@@ -80,6 +82,38 @@ assert MDList(["parent", ["child", ["grandchild"]]]).get_md() == (
     "- parent\n    - child\n        - grandchild\n"
 )
 assert MDCheckbox(["parent", ["child"]]).get_md() == ("- [ ] parent\n    - [ ] child\n")
+helper_list_items = [
+    TextUtils.bold("Important"),
+    TextUtils.text_color("ready", "green"),
+    Inline.new_link("https://example.com", text="site"),
+    ImageClass.new_inline_image("diagram", "diagram.png"),
+]
+assert helper_list_items == [
+    "**Important**",
+    '<font color="green">ready</font>',
+    "[site](https://example.com)",
+    "![diagram](diagram.png)",
+]
+expected_helper_list = (
+    "- **Important**\n"
+    '- <font color="green">ready</font>\n'
+    "- [site](https://example.com)\n"
+    "- ![diagram](diagram.png)\n"
+)
+assert MDList(helper_list_items).get_md() == expected_helper_list
+assert MDCheckbox(helper_list_items, checked=True).get_md() == (
+    "- [x] **Important**\n"
+    '- [x] <font color="green">ready</font>\n'
+    "- [x] [site](https://example.com)\n"
+    "- [x] ![diagram](diagram.png)\n"
+)
+list_doc = MdUtils("helpers")
+assert (
+    list_doc.new_list([helper_list_items[0], [helper_list_items[2], helper_list_items[3]]]) is None
+)
+assert list_doc.file_data_text == (
+    "\n- **Important**\n    - [site](https://example.com)\n    - ![diagram](diagram.png)\n"
+)
 assert TableOfContents().create_table_of_contents(["Parent", ["Child"]], depth=2) == (
     "\n* [Parent](#parent)\n\t* [Child](#child)\n"
 )
