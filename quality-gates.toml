@@ -1,7 +1,7 @@
 schema_version = 1
 
 [files]
-include = ["mdutils-stubs/**/*.pyi", "tests/**/*.py", "*.md", "pyproject.toml", "quality-gates.toml"]
+include = ["mdutils-stubs/**/*.pyi", "scripts/**/*.py", "tests/**/*.py", "*.md", "pyproject.toml", "quality-gates.toml"]
 exclude = []
 
 [checks.file_size]
@@ -91,11 +91,16 @@ argv = [
   "--color", "never", ".",
 ]
 
+[[orchestration.steps]]
+kind = "command"
+name = "Mypy and Pyright consumer fixtures"
+argv = ["{python}", "scripts/check_typing_fixtures.py"]
+
 [[orchestration.profiles]]
 name = "stub-package"
 steps = [
   "File size", "Line length", "JSON structure", "Output escaping",
-  "Path handling", "Python structure",
+  "Path handling", "Python structure", "Mypy and Pyright consumer fixtures",
 ]
 
 [[orchestration.profiles]]

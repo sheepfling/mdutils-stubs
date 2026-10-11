@@ -28,7 +28,8 @@ jobs:
       - run: ruff check .
       - run: ruff format --check .
       - run: python tests/test_api_coverage.py --stub-root mdutils-stubs
-      - run: scripts/check-typing-fixtures.sh
+      - run: python tests/test_typing_fixture_runner.py
+      - run: python scripts/check_typing_fixtures.py
       - run: python tests/runtime_api.py
       - run: stubtest --allowlist stubtest-allowlist.txt mdutils
       - run: twine check dist/*

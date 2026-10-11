@@ -51,8 +51,9 @@ SETUPTOOLS_SCM_PRETEND_VERSION=1.8.1.0 python -m build
 python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
 ruff check .
 ruff format --check .
+python tests/test_typing_fixture_runner.py
 python tests/test_api_coverage.py --stub-root "$PWD/mdutils-stubs"
-scripts/check-typing-fixtures.sh
+python scripts/check_typing_fixtures.py
 python tests/runtime_api.py
 stubtest --allowlist stubtest-allowlist.txt mdutils
 twine check dist/*
@@ -81,11 +82,13 @@ The repository keeps portable Alphus policy in
 `73e4cdb529a2945acac0c61941bf296ccb368880` of
 [`sheepfling/alphus`](https://github.com/sheepfling/alphus) (version `0.1.0`);
 install that immutable revision in a Python 3.11+ environment before running
-the profile:
+the profile. Install this checkout's package and development tools into that same
+environment so the profile has mdutils, the stubs, Mypy, and Pyright:
 
 ```shell
 python -m pip install \
   "alphus @ git+https://github.com/sheepfling/alphus.git@73e4cdb529a2945acac0c61941bf296ccb368880"
+python -m pip install ".[dev]"
 alphus --root . --config quality-gates.toml --run --profile stub-package
 ```
 
