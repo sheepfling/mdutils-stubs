@@ -7,11 +7,18 @@ describe API shape only; they do not reimplement mdutils.
 
 ## Exported modules and classes
 
-The root `mdutils` package exposes `MdUtils`, the `Header`, `Image`, `Link`,
-`Table`, and `TableOfContents` modules, the `fileutils` module, and the
-`TextUtils`, `Html`, and `MDList` classes. The `mdutils.tools` package exposes
-the upstream module/class aliases, including `TextUtils` as a class. The
-`mdutils.fileutils` package exposes `MarkDownFile`.
+The inventory covers 13 runtime modules and their matching `.pyi` files. The
+root `mdutils` package exposes 12 names: `MdUtils`; the `Header`, `Image`,
+`Link`, `Table`, and `TableOfContents` modules; the `fileutils`, `mdutils`, and
+`tools` modules; and the `TextUtils`, `Html`, and `MDList` classes. The
+`mdutils.fileutils` package exposes `MarkDownFile` and its `fileutils`
+submodule. The `mdutils.tools` package exposes 11 names, preserving upstream's
+module/class aliases (including `TextUtils` as a class).
+
+One runtime name needs special care: `mdutils.fileutils` at the root package
+attribute resolves to the inner `mdutils.fileutils.fileutils` module, while
+the importable `mdutils.fileutils` package has its own `fileutils` submodule
+alias. The declarations and alias tests preserve both paths.
 
 ## Declared public surface
 
@@ -42,7 +49,8 @@ the upstream module/class aliases, including `TextUtils` as a class. The
 
 ## Deliberate gaps
 
-- Runtime-private names beginning with `_` are not declared.
+- Private names beginning with `_` are not declared; protocol dunders such as
+  `__init__` and `__str__` are part of the checked callable surface.
 - Only mdutils 1.8.1 is in the supported dependency range. The 1.8.0 source tag
   has matching public signatures, but it is not supported until the complete
   installed-wheel consumer and runtime checks pass against that release.
@@ -54,8 +62,18 @@ the upstream module/class aliases, including `TextUtils` as a class. The
 
 ## Local compatibility gate
 
-The external consumer fixtures exercise the root and submodule imports,
-constructors, header options, list/table inputs, alignment `None`, markers,
-reference defaults, and return values. The runtime checks and `stubtest` compare
-the installed declarations with mdutils 1.8.1. The package dependency and exact
-test pin stay at 1.8.1 until the full gate supports a wider range.
+`tests/test_api_coverage.py` compares runtime and stub module inventories,
+public class/function names, class bases, every public callable's parameter
+names, parameter kinds, defaults, and decorators, public attributes, enum
+members, initializer aliases, and package exports. Counts are pinned at 18
+classes, 61 callables, 23 attributes, and 10 enum members so an API change
+requires an explicit inventory review. The positive consumer fixture imports
+every package-level export and type-checks the public members; the negative
+fixture requires six expected type diagnostics from both mypy and Pyright.
+
+Structural matching does not prove that each declared annotation fully models
+runtime semantics. The positive/negative fixtures and runtime behavior checks
+cover representative use, while strict `stubtest` checks installed stubs
+against the runtime. These checks provide different evidence and none is a
+formal proof of complete semantic typing. The package dependency and exact test
+pin stay at 1.8.1 until the full gate supports a wider range.

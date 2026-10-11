@@ -44,6 +44,7 @@ SETUPTOOLS_SCM_PRETEND_VERSION=1.8.1.0 python -m build
 python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
 ruff check .
 ruff format --check .
+python tests/test_api_coverage.py
 scripts/check-typing-fixtures.sh
 python tests/runtime_api.py
 stubtest --allowlist stubtest-allowlist.txt mdutils
@@ -51,10 +52,14 @@ twine check dist/*
 ```
 
 The wheel is installed into the consumer environment before type checking. The
-positive fixture must pass; the negative fixture must produce diagnostics from
-both checkers. Runtime behavior tests cover signatures, re-exports, table
-alignment with `None`, marker replacement, and methods whose runtime return is
-`None`.
+API inventory checks module exports, declaration shape, call signatures,
+attributes, and enum members against the pinned runtime. The positive fixture
+imports all package exports; the negative fixture must produce six expected
+diagnostics from both checkers. Runtime behavior tests cover aliases, selected
+signatures, file writes, table alignment with `None`, marker replacement, and
+methods whose runtime return is `None`. Structural checks complement semantic
+consumer fixtures; they do not prove that every annotation captures every
+runtime behavior.
 
 ## Maintenance
 
@@ -72,6 +77,14 @@ The candidate defines one lightweight verification workflow after a pull
 request is merged, plus manual dispatch. Local checks are the pre-merge gate.
 There is no push-triggered or pull-request-opened workflow and no package
 publication job.
+
+## Publication gate
+
+Before publishing either `mdutils-stubs` or `snakemd-stubs`, require both
+repositories to clear the approved Alphus scan at its currently verified
+version. The portable Alphus runner and version are not available in this
+checkout yet, so that clearance remains pending. This package's release stays
+blocked until the existing runner is identified and both results are recorded.
 
 ## Attribution and license
 

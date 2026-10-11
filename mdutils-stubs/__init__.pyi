@@ -1,6 +1,8 @@
 """Type information for the mdutils package."""
 
-from . import fileutils as fileutils
+from . import mdutils as mdutils
+from . import tools as tools
+from .fileutils import fileutils as fileutils
 from .mdutils import MdUtils as MdUtils
 from .tools import Header as Header
 from .tools import Html as Html

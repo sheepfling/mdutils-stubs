@@ -19,6 +19,12 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
+      - id: api-coverage
+        name: Runtime and stub API coverage inventory
+        entry: python tests/test_api_coverage.py
+        language: system
+        pass_filenames: false
+        always_run: true
       - id: runtime-api
         name: Runtime API checks
         entry: python tests/runtime_api.py
