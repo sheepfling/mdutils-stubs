@@ -14,7 +14,7 @@ runtime range is claimed. The version format follows
 | mdutils version | Status | Evidence |
 | --- | --- | --- |
 | 1.8.1 | Initial supported baseline | Runtime source signatures and consumer fixtures |
-| 1.8.0 | Not supported yet | Source signatures match 1.8.1; full installed-wheel checks are still required before widening |
+| 1.8.0 | Not supported yet | Signatures match 1.8.1; full installed-wheel checks remain required before widening |
 | 1.8.2 and later | Not supported yet | Review and test each upstream release before changing the dependency bound |
 
 The stubs cover the public package exports and classes listed in
@@ -44,7 +44,7 @@ SETUPTOOLS_SCM_PRETEND_VERSION=1.8.1.0 python -m build
 python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
 ruff check .
 ruff format --check .
-python tests/test_api_coverage.py
+python tests/test_api_coverage.py --stub-root "$PWD/mdutils-stubs"
 scripts/check-typing-fixtures.sh
 python tests/runtime_api.py
 stubtest --allowlist stubtest-allowlist.txt mdutils

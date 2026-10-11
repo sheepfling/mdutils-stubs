@@ -7,13 +7,17 @@ external consumer fixtures cover selected positive and negative typing cases.
 
 from __future__ import annotations
 
+import argparse
 import ast
 import importlib
 import importlib.util
+import sys
 import unittest
 from collections import Counter
 from importlib import metadata
 from pathlib import Path
+
+STUB_ROOT: Path | None = None
 
 RUNTIME_MODULES = frozenset(
     {
@@ -308,7 +312,9 @@ class PublicApiCoverageTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.runtime_root = _runtime_package_root()
-        cls.stub_root = Path(__file__).parents[1] / "mdutils-stubs"
+        if STUB_ROOT is None:
+            raise AssertionError("Pass --stub-root with the mdutils-stubs directory")
+        cls.stub_root = STUB_ROOT
         runtime_version = metadata.version("mdutils")
         if runtime_version != "1.8.1":
             raise AssertionError(
@@ -508,5 +514,23 @@ class PublicApiCoverageTests(unittest.TestCase):
                         self.fail(f"{path}: Any weakens this stub candidate")
 
 
+def _unittest_arguments(argv: list[str]) -> list[str]:
+    """Require the caller to provide the stub fixture path explicitly."""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--stub-root",
+        type=Path,
+        required=True,
+        help="path to the mdutils-stubs source directory",
+    )
+    options, remaining = parser.parse_known_args(argv[1:])
+    stub_root = options.stub_root.expanduser().resolve()
+    if not stub_root.is_dir():
+        parser.error(f"stub root is not a directory: {stub_root}")
+    global STUB_ROOT
+    STUB_ROOT = stub_root
+    return [argv[0], *remaining]
+
+
 if __name__ == "__main__":
-    unittest.main()
+    unittest.main(argv=_unittest_arguments(sys.argv))
