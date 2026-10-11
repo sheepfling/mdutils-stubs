@@ -17,12 +17,12 @@ runtime range is claimed. The version format follows
 | 1.8.0 | Not supported yet | Signatures match 1.8.1; full installed-wheel checks remain required before widening |
 | 1.8.2 and later | Not supported yet | Review and test each upstream release before changing the dependency bound |
 
-The distribution metadata currently declares Python `>=3.10,<4.0`, with
-classifiers through Python 3.14. Mypy and Pyright accepted the positive fixture
-for targets 3.10–3.14. Installed-wheel runtime and API-inventory checks passed
-on Python 3.11, 3.12, 3.13, and 3.14. A Python 3.10 interpreter is not
-installed in the local environment, so 3.10 runtime execution remains
-unverified here.
+The distribution metadata declares Python `>=3.10,<4.0`, with classifiers
+through Python 3.14. Mypy and Pyright accepted the positive fixture for targets
+3.10–3.14. The installed runtime and stub wheels passed API-inventory and
+runtime checks on Python 3.10.22, 3.11.16, 3.12.14, 3.13.15, and 3.14.7.
+Python 3.10 also passed the seven expected positive/negative consumer checks
+and strict stubtest against all 13 modules.
 
 The stubs cover the public package exports and classes listed in
 [API-COVERAGE.md](API-COVERAGE.md). They are based on the upstream 1.8.1 source
@@ -72,8 +72,7 @@ fixtures; they do not prove that every annotation captures every runtime
 behavior.
 
 The full aggregate runs in a clean Python 3.12 environment; the separate matrix
-above records which actual interpreters received the installed wheel and
-runtime checks.
+above records the actual interpreter versions checked with installed wheels.
 
 ## Optional repository quality profiles
 
