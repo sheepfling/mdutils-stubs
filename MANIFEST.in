@@ -1,6 +1,7 @@
 include LICENSE
 include README.md
 include API-COVERAGE.md
+include quality-gates.toml
 include requirements/compatibility.txt
 recursive-include mdutils-stubs *.pyi
 recursive-include tests *.py

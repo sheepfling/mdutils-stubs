@@ -302,6 +302,64 @@ def _stub_import_bindings(package: str, tree: ast.Module) -> dict[str, tuple[str
     return bindings
 
 
+def _uses_typing_any(tree: ast.Module) -> bool:
+    direct_aliases: set[str] = set()
+    module_aliases: set[str] = set()
+    for node in tree.body:
+        if isinstance(node, ast.ImportFrom) and node.module in {
+            "typing",
+            "typing_extensions",
+        }:
+            direct_aliases.update(
+                alias.asname or alias.name for alias in node.names if alias.name == "Any"
+            )
+        elif isinstance(node, ast.Import):
+            module_aliases.update(
+                alias.asname or alias.name
+                for alias in node.names
+                if alias.name in {"typing", "typing_extensions"}
+            )
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Name) and node.id in direct_aliases:
+            return True
+        if (
+            isinstance(node, ast.Attribute)
+            and node.attr == "Any"
+            and isinstance(node.value, ast.Name)
+            and node.value.id in module_aliases
+        ):
+            return True
+    return False
+
+
+def _stub_function_parameters(
+    function: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[ast.arg]:
+    arguments = function.args
+    parameters = [*arguments.posonlyargs, *arguments.args, *arguments.kwonlyargs]
+    if arguments.vararg is not None:
+        parameters.append(arguments.vararg)
+    if arguments.kwarg is not None:
+        parameters.append(arguments.kwarg)
+    if parameters and parameters[0].arg in {"self", "cls"}:
+        parameters = parameters[1:]
+    return parameters
+
+
+def _runtime_class_index(runtime_root: Path) -> dict[str, set[str]]:
+    result: dict[str, set[str]] = {}
+    for relative in RUNTIME_MODULES:
+        package_path = relative.replace("/", ".")
+        if package_path == "__init__":
+            module = "mdutils"
+        else:
+            module = "mdutils." + package_path.removesuffix(".__init__")
+        tree = ast.parse((runtime_root / f"{relative}.py").read_text(encoding="utf-8"))
+        result[module] = set(_class_nodes(tree))
+    return result
+
+
 def _runtime_package_root() -> Path:
     spec = importlib.util.find_spec("mdutils")
     if spec is None or spec.origin is None:
@@ -391,6 +449,29 @@ class PublicApiCoverageTests(unittest.TestCase):
         self.assertEqual(method_count, 61)
         self.assertEqual(attribute_count, 23)
         self.assertEqual(enum_member_count, 10)
+
+    def test_stub_public_callables_have_complete_annotations(self) -> None:
+        for relative in sorted(RUNTIME_MODULES):
+            stub_path = self.stub_root / f"{relative}.pyi"
+            tree = ast.parse(stub_path.read_text(encoding="utf-8"))
+            functions = [
+                node
+                for node in tree.body
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and _is_public(node.name)
+            ]
+            for class_node in _class_nodes(tree).values():
+                functions.extend(_method_nodes(class_node).values())
+            for function in functions:
+                for parameter in _stub_function_parameters(function):
+                    self.assertIsNotNone(
+                        parameter.annotation,
+                        f"{relative}:{function.name}.{parameter.arg} needs an annotation",
+                    )
+                self.assertIsNotNone(
+                    function.returns,
+                    f"{relative}:{function.name} needs a return annotation",
+                )
 
     def test_initializer_exports_match_runtime_aliases_and_typing_fixture(self) -> None:
         fixture_path = Path(__file__).parent / "fixtures" / "positive.py"
@@ -483,6 +564,81 @@ class PublicApiCoverageTests(unittest.TestCase):
             "protocol __str__ call inventory",
         )
 
+    def test_consumer_fixture_probes_public_methods_on_their_declaring_classes(self) -> None:
+        fixture_path = Path(__file__).parent / "fixtures" / "positive.py"
+        fixture_tree = ast.parse(fixture_path.read_text(encoding="utf-8"))
+        runtime_classes = _runtime_class_index(self.runtime_root)
+        class_aliases: dict[str, tuple[str, str]] = {}
+        module_aliases: dict[str, str] = {}
+
+        for node in fixture_tree.body:
+            if not isinstance(node, ast.ImportFrom):
+                continue
+            for imported in node.names:
+                local_name = imported.asname or imported.name
+                if node.module in EXPORT_TARGETS and imported.name in EXPORT_TARGETS[node.module]:
+                    module, class_name = EXPORT_TARGETS[node.module][imported.name]
+                    if class_name is None:
+                        module_aliases[local_name] = module
+                    else:
+                        class_aliases[local_name] = (module, class_name)
+                elif (
+                    node.module in runtime_classes and imported.name in runtime_classes[node.module]
+                ):
+                    class_aliases[local_name] = (node.module, imported.name)
+
+        def class_for_expression(expression: ast.expr) -> tuple[str, str] | None:
+            if isinstance(expression, ast.Name):
+                return class_aliases.get(expression.id)
+            if isinstance(expression, ast.Attribute) and isinstance(expression.value, ast.Name):
+                module = module_aliases.get(expression.value.id)
+                if module is not None and expression.attr in runtime_classes.get(module, set()):
+                    return (module, expression.attr)
+            if isinstance(expression, ast.Call):
+                return class_for_expression(expression.func)
+            return None
+
+        instances: dict[str, tuple[str, str]] = {}
+        for node in ast.walk(fixture_tree):
+            if isinstance(node, ast.Assign) and isinstance(node.value, ast.Call):
+                targets = node.targets
+            elif isinstance(node, ast.AnnAssign) and isinstance(node.value, ast.Call):
+                targets = [node.target]
+            else:
+                continue
+            target_class = class_for_expression(node.value.func)
+            if target_class is not None:
+                for target in targets:
+                    if isinstance(target, ast.Name):
+                        instances[target.id] = target_class
+
+        def receiver_class(expression: ast.expr) -> tuple[str, str] | None:
+            if isinstance(expression, ast.Name) and expression.id in instances:
+                return instances[expression.id]
+            return class_for_expression(expression)
+
+        expected: Counter[tuple[str, str, str]] = Counter()
+        for relative in RUNTIME_MODULES:
+            module = (
+                "mdutils"
+                if relative == "__init__"
+                else "mdutils." + relative.replace("/", ".").removesuffix(".__init__")
+            )
+            tree = ast.parse((self.runtime_root / f"{relative}.py").read_text(encoding="utf-8"))
+            for class_name, class_node in _class_nodes(tree).items():
+                for method_name in _method_nodes(class_node):
+                    if method_name not in {"__init__", "__str__"}:
+                        expected[(module, class_name, method_name)] += 1
+
+        observed: Counter[tuple[str, str, str]] = Counter()
+        for node in ast.walk(fixture_tree):
+            if not isinstance(node, ast.Call) or not isinstance(node.func, ast.Attribute):
+                continue
+            owner = receiver_class(node.func.value)
+            if owner is not None:
+                observed[(*owner, node.func.attr)] += 1
+        self.assertEqual(observed, expected, "typed method calls by declaring class")
+
         parents = {
             child: parent
             for parent in ast.walk(fixture_tree)
@@ -503,16 +659,24 @@ class PublicApiCoverageTests(unittest.TestCase):
             self.assertIsNotNone(parent, f"{node.func.attr} call must assert its result type")
 
     def test_runtime_has_no_unmodeled_dynamic_api_hooks_or_any_annotations(self) -> None:
-        forbidden = {"__getattr__", "__getattribute__", "__dir__", "setattr", "exec", "eval"}
+        forbidden_hooks = {"__getattr__", "__getattribute__", "__dir__"}
+        forbidden_calls = {"setattr", "exec", "eval"}
         for root in (self.runtime_root, self.stub_root):
             for path in root.rglob("*.py" if root == self.runtime_root else "*.pyi"):
                 source = path.read_text(encoding="utf-8")
                 tree = ast.parse(source)
+                self.assertFalse(_uses_typing_any(tree), f"{path}: Any weakens this candidate")
                 for node in ast.walk(tree):
-                    if isinstance(node, ast.Name):
-                        self.assertNotIn(node.id, forbidden, f"{path}: dynamic API hook {node.id}")
-                    if isinstance(node, ast.Name) and node.id == "Any":
-                        self.fail(f"{path}: Any weakens this stub candidate")
+                    if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                        self.assertNotIn(
+                            node.name, forbidden_hooks, f"{path}: dynamic API hook {node.name}"
+                        )
+                    if (
+                        isinstance(node, ast.Call)
+                        and isinstance(node.func, ast.Name)
+                        and node.func.id in forbidden_calls
+                    ):
+                        self.fail(f"{path}: dynamic API call {node.func.id}")
 
 
 def _unittest_arguments(argv: Sequence[str]) -> list[str]:

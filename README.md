@@ -17,6 +17,13 @@ runtime range is claimed. The version format follows
 | 1.8.0 | Not supported yet | Signatures match 1.8.1; full installed-wheel checks remain required before widening |
 | 1.8.2 and later | Not supported yet | Review and test each upstream release before changing the dependency bound |
 
+The distribution metadata currently declares Python `>=3.10,<4.0`, with
+classifiers through Python 3.14. Mypy and Pyright accepted the positive fixture
+for targets 3.10–3.14. Installed-wheel runtime and API-inventory checks passed
+on Python 3.11, 3.12, 3.13, and 3.14. A Python 3.10 interpreter is not
+installed in the local environment, so 3.10 runtime execution remains
+unverified here.
+
 The stubs cover the public package exports and classes listed in
 [API-COVERAGE.md](API-COVERAGE.md). They are based on the upstream 1.8.1 source
 tag at commit `170f7d040ea598672c53015a5db4fab868dacba0`, including its
@@ -52,14 +59,47 @@ twine check dist/*
 ```
 
 The wheel is installed into the consumer environment before type checking. The
-API inventory checks module exports, declaration shape, call signatures,
-attributes, and enum members against the pinned runtime. The positive fixture
-imports all package exports; the negative fixture must produce six expected
-diagnostics from both checkers. Runtime behavior tests cover aliases, selected
-signatures, file writes, table alignment with `None`, marker replacement, and
-methods whose runtime return is `None`. Structural checks complement semantic
-consumer fixtures; they do not prove that every annotation captures every
-runtime behavior.
+API inventory checks module exports, declaration shape, callable signatures,
+annotations, attributes, and enum members against the pinned runtime. The
+positive fixture imports all package exports and calls every public callable;
+the negative fixture must produce seven expected diagnostics from both checkers,
+including rejection of a non-string nested-list item.
+
+Runtime behavior tests include recursive list and TOC inputs, aliases, file
+writes, table alignment with `None`, marker replacement, and methods whose
+runtime return is `None`. Structural checks complement semantic consumer
+fixtures; they do not prove that every annotation captures every runtime
+behavior.
+
+The full aggregate runs in a clean Python 3.12 environment; the separate matrix
+above records which actual interpreters received the installed wheel and
+runtime checks.
+
+## Optional repository quality profiles
+
+The repository keeps portable Alphus policy in
+[`quality-gates.toml`](quality-gates.toml). Alphus is pinned to source commit
+`73e4cdb529a2945acac0c61941bf296ccb368880` of
+[`sheepfling/alphus`](https://github.com/sheepfling/alphus) (version `0.1.0`);
+install that immutable revision in a Python 3.11+ environment before running
+the profile:
+
+```shell
+python -m pip install \
+  "alphus @ git+https://github.com/sheepfling/alphus.git@73e4cdb529a2945acac0c61941bf296ccb368880"
+alphus --root . --config quality-gates.toml --run --profile stub-package
+```
+
+The independent `markdown-quality` profile invokes `mdrepo 0.0.1.post0` for
+Markdown link/graph checks and `rumdl 0.2.77` for Markdown lint. Those tools are
+optional external commands, not package dependencies or hosted CI jobs. The
+profile disables rumdl's line-length rule because the Alphus policy owns those
+limits. It enables mdrepo's document graph from `README.md` without copying
+either tool's validation logic into this repository.
+
+```shell
+alphus --root . --config quality-gates.toml --run --profile markdown-quality
+```
 
 ## Maintenance
 
@@ -78,13 +118,12 @@ request is merged, plus manual dispatch. Local checks are the pre-merge gate.
 There is no push-triggered or pull-request-opened workflow and no package
 publication job.
 
-## Publication gate
+## Release gate
 
-Before publishing either `mdutils-stubs` or `snakemd-stubs`, require both
-repositories to clear the approved Alphus scan at its currently verified
-version. The portable Alphus runner and version are not available in this
-checkout yet, so that clearance remains pending. This package's release stays
-blocked until the existing runner is identified and both results are recorded.
+The Alphus `stub-package` and optional `markdown-quality` profiles are local
+release gates; both passed during this candidate's verification. A local pass
+is evidence for this repository only; it does not authorize publication or
+establish SnakeMD status. No package publication is performed by this project.
 
 ## Attribution and license
 

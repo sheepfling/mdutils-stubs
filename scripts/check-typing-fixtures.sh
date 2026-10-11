@@ -23,6 +23,7 @@ check_negative() {
             'Argument "title"'
             'List item 0'
             'Argument "text_align"'
+            'list[_ListItem]'
             'Argument "text"'
         )
     else
@@ -32,6 +33,7 @@ check_negative() {
             'parameter "title"'
             'parameter "text" of type "list[str]"'
             'parameter "text_align"'
+            'parameter "items" of type "list[_ListItem]"'
             'parameter "text" of type "str"'
         )
     fi
@@ -62,5 +64,5 @@ check_negative() {
     rm -rf "$cache"
 }
 
-check_negative mypy 6 mypy --strict tests/fixtures/negative.py
-check_negative pyright 6 pyright --pythonpath "$(command -v python)" tests/fixtures/negative.py
+check_negative mypy 7 mypy --strict tests/fixtures/negative.py
+check_negative pyright 7 pyright --pythonpath "$(command -v python)" tests/fixtures/negative.py

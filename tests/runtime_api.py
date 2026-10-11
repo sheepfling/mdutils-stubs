@@ -8,6 +8,8 @@ from tempfile import TemporaryDirectory
 import mdutils
 from mdutils import MdUtils, TextUtils
 from mdutils.fileutils import MarkDownFile
+from mdutils.tools.MDList import MDCheckbox, MDList
+from mdutils.tools.TableOfContents import TableOfContents
 from mdutils.tools.TextUtils import TextUtils as ModuleTextUtils
 
 
@@ -74,6 +76,18 @@ assert (
 )
 assert doc.new_list(["one"]) is None
 assert doc.new_checkbox_list(["one"]) is None
+assert MDList(["parent", ["child", ["grandchild"]]]).get_md() == (
+    "- parent\n    - child\n        - grandchild\n"
+)
+assert MDCheckbox(["parent", ["child"]]).get_md() == ("- [ ] parent\n    - [ ] child\n")
+assert TableOfContents().create_table_of_contents(["Parent", ["Child"]], depth=2) == (
+    "\n* [Parent](#parent)\n\t* [Child](#child)\n"
+)
+nested_doc = MdUtils("nested")
+assert nested_doc.new_list(["parent", ["child"]]) is None
+assert nested_doc.file_data_text == "\n- parent\n    - child\n"
+assert nested_doc.new_checkbox_list(["parent", ["child"]], checked=True) is None
+assert nested_doc.file_data_text.endswith("\n- [x] parent\n    - [x] child\n")
 
 with TemporaryDirectory(prefix="mdutils-stubs-runtime-") as temporary_directory:
     path = Path(temporary_directory) / "sample.md"

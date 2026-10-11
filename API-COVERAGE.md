@@ -47,6 +47,70 @@ alias. The declarations and alias tests preserve both paths.
   contents generation.
 - `mdutils.tools.TextUtils`: every public static text-formatting helper.
 
+## Per-class coverage ledger
+
+The member names below are compared one class at a time against the installed
+1.8.1 runtime. `__init__` and `__str__` are included in callable counts.
+Public state lists class annotations and instance attributes assigned by the
+runtime constructor; enum rows list members instead of state.
+
+- `mdutils.fileutils.fileutils.MarkDownFile`
+  - Callables: `__init__`, `append_after_second_line`, `append_end`, `read_file`,
+    `rewrite_all_file`.
+  - State: `dirname`, `file`, `file_name`.
+- `mdutils.mdutils.MdUtils`
+  - Callables: `__init__`, `create_md_file`, `create_marker`, `get_md_text`,
+    `insert_code`, `new_checkbox_list`, `new_header`, `new_inline_image`,
+    `new_inline_link`, `new_line`, `new_list`, `new_paragraph`,
+    `new_reference_image`, `new_reference_link`, `new_table`,
+    `new_table_array`, `new_table_of_contents`, `place_text_using_marker`,
+    `read_md_file`, `write`.
+  - State: `author`, `file_data_text`, `file_name`, `image`, `reference`,
+    `table_of_contents`, `textUtils`, `title`.
+- `mdutils.tools.Header.Header`
+  - Callables: `__init__`, `__str__`, `atx`, `choose_header`, `header_anchor`,
+    `setext`.
+  - State: `header_id`, `level`, `style`, `title`.
+- `mdutils.tools.Header.HeaderStyle`
+  - Enum members: `ATX`, `SETEXT`.
+- `mdutils.tools.Header.AtxHeaderLevel`
+  - Enum members: `TITLE`, `HEADING`, `SUBHEADING`, `SUBSUBHEADING`,
+    `MINORHEADING`, `LEASTHEADING`.
+- `mdutils.tools.Header.SetextHeaderLevel`
+  - Enum members: `TITLE`, `HEADING`.
+- `mdutils.tools.Html.Html`
+  - Callables: `image`, `paragraph`.
+- `mdutils.tools.Html.HtmlSize`
+  - Callables: `size_to_width_and_height`.
+- `mdutils.tools.Html.SizeBadFormat`
+  - Callables: `__init__`.
+- `mdutils.tools.Image.Image`
+  - Callables: `__init__`, `new_inline_image`, `new_reference_image`.
+  - State: `reference`.
+- `mdutils.tools.Link.Inline`
+  - Callables: `new_link`.
+- `mdutils.tools.Link.Reference`
+  - Callables: `__init__`, `get_references`, `get_references_as_markdown`,
+    `new_link`.
+  - State: `references`.
+- `mdutils.tools.MDList.MDListHelper`
+  - Callables: `__init__`.
+  - State: `n_tabs`.
+- `mdutils.tools.MDList.MDList`
+  - Callables: `__init__`, `get_md`.
+  - State: `md_list`.
+- `mdutils.tools.MDList.MDCheckbox`
+  - Callables: `__init__`, `get_md`.
+  - State: `checked`, `md_list`.
+- `mdutils.tools.Table.Table`
+  - Callables: `__init__`, `create_table`, `create_table_array`.
+  - State: `columns`, `rows`.
+- `mdutils.tools.TableOfContents.TableOfContents`
+  - Callables: `create_table_of_contents`.
+- `mdutils.tools.TextUtils.TextUtils`
+  - Callables: `add_tooltip`, `bold`, `center_text`, `inline_code`,
+    `insert_code`, `italics`, `text_color`, `text_external_link`, `text_format`.
+
 ## Deliberate gaps
 
 - Private names beginning with `_` are not declared; protocol dunders such as
@@ -64,16 +128,21 @@ alias. The declarations and alias tests preserve both paths.
 
 `tests/test_api_coverage.py` compares runtime and stub module inventories,
 public class/function names, class bases, every public callable's parameter
-names, parameter kinds, defaults, and decorators, public attributes, enum
-members, initializer aliases, and package exports. Counts are pinned at 18
+names, kinds, defaults, and decorators, public attributes, enum members,
+initializer aliases, and package exports. It also requires annotations on every
+public stub callable, rejects `Any` even through a `typing` alias, and matches
+positive-fixture calls to their declaring classes. Counts are pinned at 18
 classes, 61 callables, 23 attributes, and 10 enum members so an API change
-requires an explicit inventory review. The positive consumer fixture imports
-every package-level export and type-checks the public members; the negative
-fixture requires six expected type diagnostics from both mypy and Pyright.
+requires an explicit inventory review. The positive fixture imports every
+package-level export and type-checks every public callable; the negative
+fixture requires seven expected type diagnostics from both mypy and Pyright,
+including rejection of a non-string leaf nested in a list.
 
+Nested list and table-of-contents inputs are checked as recursive structures,
+including runtime output for nested lists, checkboxes, and a depth-2 TOC.
 Structural matching does not prove that each declared annotation fully models
-runtime semantics. The positive/negative fixtures and runtime behavior checks
-cover representative use, while strict `stubtest` checks installed stubs
-against the runtime. These checks provide different evidence and none is a
-formal proof of complete semantic typing. The package dependency and exact test
-pin stay at 1.8.1 until the full gate supports a wider range.
+runtime semantics. The fixtures and runtime checks cover selected behavior,
+while strict `stubtest` compares installed stubs against the runtime. These
+checks provide different evidence and none is a formal proof of complete
+semantic typing. The package dependency and exact test pin stay at 1.8.1 until
+the full gate supports a wider range.

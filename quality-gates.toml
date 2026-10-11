@@ -1,0 +1,103 @@
+schema_version = 1
+
+[files]
+include = ["mdutils-stubs/**/*.pyi", "tests/**/*.py", "*.md", "pyproject.toml", "quality-gates.toml"]
+exclude = []
+
+[checks.file_size]
+code_extensions = [".py", ".pyi"]
+code_limit = 3000
+hard_limit = 5000
+initializer_name = "__init__.pyi"
+initializer_limit = 100
+exclude = []
+
+[checks.line_length]
+exclude = []
+
+[checks.line_length.limits]
+".py" = 100
+".pyi" = 100
+".md" = 120
+".toml" = 120
+
+[checks.json_structure]
+extensions = [".py"]
+exclude = []
+
+[checks.output_escaping]
+extensions = [".py"]
+exclude = []
+
+[checks.path_discovery]
+extensions = [".py"]
+exclude = []
+inspection_exclude = []
+
+[checks.python_style]
+extensions = [".py"]
+exclude = []
+opaque_boundary_paths = []
+opaque_boundary_marker_prefix = "# opaque-boundary: "
+opaque_boundary_min_reason_chars = 12
+forbidden_main_imports = ["main"]
+
+[orchestration]
+default_profile = "stub-package"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "File size"
+rule = "file-size"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "Line length"
+rule = "line-length"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "JSON structure"
+rule = "json-structure"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "Output escaping"
+rule = "output-escaping"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "Path handling"
+rule = "path-discovery"
+
+[[orchestration.steps]]
+kind = "rule"
+name = "Python structure"
+rule = "python-style"
+
+[[orchestration.steps]]
+kind = "command"
+name = "Markdown repository links and graph"
+argv = [
+  "mdrepo", "--root", "{root}", "--set", "orphans.enabled=true", "--set",
+  'orphans.roots=["README.md"]', "check", "--summary",
+]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Markdown lint"
+argv = [
+  "rumdl", "--no-config", "check", "--disable", "MD013", "--no-cache",
+  "--color", "never", ".",
+]
+
+[[orchestration.profiles]]
+name = "stub-package"
+steps = [
+  "File size", "Line length", "JSON structure", "Output escaping",
+  "Path handling", "Python structure",
+]
+
+[[orchestration.profiles]]
+name = "markdown-quality"
+steps = ["Markdown repository links and graph", "Markdown lint"]

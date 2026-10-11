@@ -1,6 +1,7 @@
 """Public facade and builder class for mdutils."""
 
 from textwrap import fill as fill
+from typing import TypeAlias
 
 from .fileutils.fileutils import MarkDownFile as MarkDownFile
 from .tools import Table as Table
@@ -13,6 +14,8 @@ from .tools.Link import Reference as Reference
 from .tools.MDList import MDCheckbox as MDCheckbox
 from .tools.MDList import MDList as MDList
 from .tools.TextUtils import TextUtils as TextUtils
+
+_ListItem: TypeAlias = str | list["_ListItem"]
 
 class MdUtils:
     file_name: str
@@ -107,5 +110,5 @@ class MdUtils:
     def new_reference_image(
         self, text: str, path: str, reference_tag: str | None = None
     ) -> str: ...
-    def new_list(self, items: list[str], marked_with: str = "-") -> None: ...
-    def new_checkbox_list(self, items: list[str], checked: bool = False) -> None: ...
+    def new_list(self, items: list[_ListItem], marked_with: str = "-") -> None: ...
+    def new_checkbox_list(self, items: list[_ListItem], checked: bool = False) -> None: ...
