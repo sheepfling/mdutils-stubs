@@ -14,6 +14,7 @@ import importlib.util
 import sys
 import unittest
 from collections import Counter
+from collections.abc import Sequence
 from importlib import metadata
 from pathlib import Path
 
@@ -514,7 +515,7 @@ class PublicApiCoverageTests(unittest.TestCase):
                         self.fail(f"{path}: Any weakens this stub candidate")
 
 
-def _unittest_arguments(argv: list[str]) -> list[str]:
+def _unittest_arguments(argv: Sequence[str]) -> list[str]:
     """Require the caller to provide the stub fixture path explicitly."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
