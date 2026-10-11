@@ -21,7 +21,7 @@ repos:
         always_run: true
       - id: api-coverage
         name: Runtime and stub API coverage inventory
-        entry: python tests/test_api_coverage.py
+        entry: python tests/test_api_coverage.py --stub-root mdutils-stubs
         language: system
         pass_filenames: false
         always_run: true
