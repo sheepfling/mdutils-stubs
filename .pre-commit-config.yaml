@@ -15,7 +15,7 @@ repos:
         always_run: true
       - id: typing-fixtures
         name: Mypy and Pyright external-consumer fixtures
-        entry: python -m tests.check_typing_fixtures
+        entry: python -m tests.check_typing_fixtures --root .
         language: system
         pass_filenames: false
         always_run: true

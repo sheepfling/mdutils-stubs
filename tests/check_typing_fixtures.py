@@ -1,5 +1,6 @@
 """Run mdutils's configured example contracts through Alphus."""
 
+import argparse
 from pathlib import Path
 
 from alphus_stub_quality.typing_fixtures import run_suite
@@ -7,7 +8,9 @@ from alphus_stub_quality.verify import read_config
 
 
 def main() -> int:
-    root = Path.cwd()
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--root", required=True, type=Path)
+    root = parser.parse_args().root.resolve()
     settings = read_config(root, Path("stub-quality.json"))
     passed = run_suite(
         root / settings.positive_fixture,

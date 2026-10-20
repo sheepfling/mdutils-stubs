@@ -16,8 +16,6 @@ from pathlib import Path
 
 from alphus_stub_quality import api_contracts
 
-STUB_ROOT = Path(__file__).resolve().parents[1] / "mdutils-stubs"
-
 RUNTIME_MODULES = frozenset(
     {
         "__init__",
@@ -165,7 +163,6 @@ class PublicApiCoverageTests(api_contracts.ApiCoverageTests):
     package_exports = PACKAGE_EXPORTS
     stub_imports = PACKAGE_STUB_IMPORTS
     export_targets = EXPORT_TARGETS
-    stub_root = STUB_ROOT
     fixture_path = Path(__file__).parent / "fixtures" / "positive.py"
 
 
@@ -182,8 +179,6 @@ def _unittest_arguments(argv: Sequence[str]) -> list[str]:
     stub_root = options.stub_root.expanduser().resolve()
     if not stub_root.is_dir():
         parser.error(f"stub root is not a directory: {stub_root}")
-    global STUB_ROOT
-    STUB_ROOT = stub_root
     PublicApiCoverageTests.stub_root = stub_root
     return [argv[0], *remaining]
 

@@ -57,7 +57,7 @@ python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
 python -m ruff check .
 python -m ruff format --check .
 python -m pytest -q
-python -m tests.check_typing_fixtures
+python -m tests.check_typing_fixtures --root .
 python -m tests.runtime_api
 python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
 python -m twine check dist/*
