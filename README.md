@@ -47,11 +47,13 @@ include a py.typed marker.
 
 ## Local checks
 
-From the repository root, install the development tools and pinned runtime,
-build the wheel, and install it before running the consumer checks:
+Use a Python 3.11+ verification environment. From the repository root, install
+the development tools, pinned Alphus tooling and runtime, then build and install
+the wheel before running the consumer checks:
 
 ```shell
 python -m pip install ".[dev]" -r requirements/compatibility.txt
+python -m pip install -r requirements-quality.txt
 SETUPTOOLS_SCM_PRETEND_VERSION=1.8.1.0 python -m build
 python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
 python -m ruff check .
