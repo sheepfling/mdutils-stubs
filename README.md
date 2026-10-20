@@ -71,8 +71,8 @@ the consumer type checkers therefore see the installed wheel. See
 ## Optional side validation
 
 [quality-gates.toml](quality-gates.toml) contains optional local Alphus and
-Markdown profiles. They are advisory checks, not required development
-dependencies, verification steps, or release gates.
+Markdown profiles. Those source and Markdown profiles remain advisory. The shared build, API,
+and example-verification tooling is described below.
 
 ## Maintenance
 
@@ -89,3 +89,20 @@ release decision.
 These declarations describe the public API of MIT-licensed
 [didix21/mdutils](https://github.com/didix21/mdutils). The stub package does not
 copy the upstream runtime implementation. See [LICENSE](LICENSE).
+
+### Shared verification tooling
+
+The reusable example runner and AST/API assertions come from the reviewed
+Alphus revision recorded in `requirements-quality.txt`. Install that tooling
+in a dedicated Python 3.11+ verification environment:
+
+```shell
+python -m pip install -r requirements-quality.txt
+python -m alphus_stub_quality.verify --root . --config stub-quality.json --with-twine
+```
+
+For an unpublished local candidate, install its built Alphus wheel instead of
+the Git requirement. The consumer wheel has no Alphus runtime dependency.
+Python 3.10 matrix jobs can use a reviewed source checkout via
+`PYTHONPATH=/path/to/alphus/src`, with the same tool dependencies provisioned.
+The main Alphus CLI still requires Python 3.11 or later.

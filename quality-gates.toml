@@ -43,6 +43,7 @@ opaque_boundary_min_reason_chars = 12
 forbidden_main_imports = ["main"]
 
 [orchestration]
+default_profile = "stub-package"
 
 [[orchestration.steps]]
 kind = "rule"

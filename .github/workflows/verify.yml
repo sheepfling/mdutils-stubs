@@ -18,17 +18,13 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
-      - uses: actions/setup-python@v5
+          fetch-depth: 0
+      - uses: sheepfling/alphus/ci/stub-quality@bb4a1e8ef2a6442a844c16fffc546f8ae8f52a05
         with:
-          python-version: "3.12"
-      - run: python -m pip install --upgrade pip
-      - run: python -m pip install ".[dev]" -r requirements/compatibility.txt
-      - run: python -m build
-      - run: python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
+          requirements-file: requirements/compatibility.txt
+          config-file: stub-quality.json
+          with-twine: "true"
+      - run: python -m pip install "ruff>=0.16" "pytest>=7.4"
       - run: python -m ruff check .
       - run: python -m ruff format --check .
       - run: python -m pytest -q
-      - run: python -m tests.check_typing_fixtures
-      - run: python -m tests.runtime_api
-      - run: python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
-      - run: python -m twine check dist/*

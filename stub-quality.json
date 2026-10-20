@@ -1,0 +1,33 @@
+{
+  "verification": {
+    "stubtest_module": "mdutils",
+    "stubtest_allowlist": "stubtest-allowlist.txt",
+    "positive_fixture": "tests/fixtures/positive.py",
+    "negative_fixture": "tests/fixtures/negative.py",
+    "negative_expected_count": 7,
+    "mypy_diagnostics": [
+      "Argument \"file_name\"",
+      "Argument \"level\"",
+      "Argument \"title\"",
+      "List item 0",
+      "Argument \"text_align\"",
+      "list[_ListItem]",
+      "Argument \"text\""
+    ],
+    "pyright_diagnostics": [
+      "parameter \"file_name\"",
+      "parameter \"level\"",
+      "parameter \"title\"",
+      "parameter \"text\" of type \"list[str]\"",
+      "parameter \"text_align\"",
+      "parameter \"items\" of type \"list[_ListItem]\"",
+      "parameter \"text\" of type \"str\""
+    ],
+    "api_audit_module": "tests.test_api_coverage",
+    "api_audit_args": [
+      "--stub-root",
+      "{source}/mdutils-stubs"
+    ],
+    "runtime_smoke_module": "tests.runtime_api"
+  }
+}
