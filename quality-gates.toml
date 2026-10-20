@@ -122,6 +122,10 @@ name = "markdown"
 steps = ["Markdown repository links and graph", "Markdown lint"]
 
 [[orchestration.profiles]]
+name = "quality"
+includes = ["python", "markdown"]
+
+[[orchestration.profiles]]
 name = "check"
 includes = ["stubs", "python", "markdown"]
 

@@ -106,9 +106,23 @@ python -m alphus_stub_quality.verify --root . --config stub-quality.json --with-
 
 For an unpublished local candidate, install its built Alphus wheel instead of
 the Git requirement. The consumer wheel has no Alphus runtime dependency.
-Python 3.10 matrix jobs can use a reviewed source checkout via
-`PYTHONPATH=/path/to/alphus/src`, with the same tool dependencies provisioned.
-The main Alphus CLI still requires Python 3.11 or later.
+Alphus and native Mypy/Pyright run in a Python 3.11+ checker environment.
+Build/install, API audit, native stubtest and smoke execute in a distinct target
+venv. The target does not install Alphus. For example, after provisioning the
+checker as above, use a Python 3.10 target:
+
+```shell
+python3.10 -m venv /path/to/target
+/path/to/target/bin/python -m pip install -r requirements-target.txt \
+  -r requirements/compatibility.txt
+python -m alphus_stub_quality.verify --root . --config stub-quality.json \
+  --with-twine --target-python /path/to/target/bin/python --report target-result.json
+```
+
+Repeat with each Python target 3.10–3.14. Both native static checkers explicitly
+select that target's packages and language version; the JSON report records
+checker/target identities and each executed stage. Failed target checks stop the
+run without falling back to the checker.
 
 ### Consumer profiles
 
@@ -121,7 +135,10 @@ alphus --root . --config quality-gates.toml --run --profile check
 
 Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
 part. The stub stage builds and installs the wheel before later tooling runs.
-The shared `ci/quality` action executes this same composition once. Each
+Hosted CI runs `quality` (`python` plus `markdown`) once and the shared
+`ci/stub-quality` action once per target 3.10–3.14, using checker Python 3.12.
+It runs only after a merged PR or manual dispatch. Both action references and
+`requirements-quality.txt` pin the same immutable Alphus commit. Each
 repository retains its native tool settings, examples and API expectations;
 Alphus owns the repeated checking mechanisms and their regression tests.
 The API adapter tests run in the stub stage; the aggregate does not repeat them
