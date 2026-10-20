@@ -19,12 +19,9 @@ jobs:
         with:
           ref: ${{ github.event_name == 'workflow_dispatch' && github.sha || github.event.pull_request.merge_commit_sha }}
           fetch-depth: 0
-      - uses: sheepfling/alphus/ci/stub-quality@bb4a1e8ef2a6442a844c16fffc546f8ae8f52a05
+      - uses: sheepfling/alphus/ci/quality@d613d28dad418ed02a0fd2a94ee6e75df09abe9e
         with:
-          requirements-file: requirements/compatibility.txt
-          config-file: stub-quality.json
-          with-twine: "true"
-      - run: python -m pip install "ruff>=0.16" "pytest>=7.4"
-      - run: python -m ruff check .
-      - run: python -m ruff format --check .
-      - run: python -m pytest -q
+          requirements-file: requirements-verification.txt
+          runtime-requirements-file: requirements/compatibility.txt
+          config-file: quality-gates.toml
+          profile: check

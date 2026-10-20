@@ -1,0 +1,8 @@
+# The consumer owns its native toolchain; Alphus owns orchestration.
+.[dev]
+# The shared verifier builds without isolation, so its backend must be active.
+setuptools>=80
+setuptools-scm>=9.2
+wheel
+mdrepo==0.0.1.post0
+rumdl==0.2.77

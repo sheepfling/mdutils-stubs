@@ -43,7 +43,7 @@ opaque_boundary_min_reason_chars = 12
 forbidden_main_imports = ["main"]
 
 [orchestration]
-default_profile = "stub-package"
+default_profile = "check"
 
 [[orchestration.steps]]
 kind = "rule"
@@ -91,6 +91,41 @@ argv = [
   "--color", "never", ".",
 ]
 
+[[orchestration.steps]]
+kind = "command"
+name = "Build and verify the installed consumer surface"
+argv = [
+  "{python}", "-m", "alphus_stub_quality.verify", "--root", "{root}",
+  "--config", "stub-quality.json", "--with-twine",
+]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Python lint"
+argv = ["{python}", "-m", "ruff", "check", "."]
+
+[[orchestration.steps]]
+kind = "command"
+name = "Python format"
+argv = ["{python}", "-m", "ruff", "format", "--check", "."]
+
+[[orchestration.profiles]]
+name = "stubs"
+steps = ["Build and verify the installed consumer surface"]
+
+[[orchestration.profiles]]
+name = "python"
+steps = ["Python lint", "Python format"]
+
+[[orchestration.profiles]]
+name = "markdown"
+steps = ["Markdown repository links and graph", "Markdown lint"]
+
+[[orchestration.profiles]]
+name = "check"
+includes = ["stubs", "python", "markdown"]
+
+# Compatibility names retain the existing optional source/Markdown selections.
 [[orchestration.profiles]]
 name = "stub-package"
 steps = [
@@ -100,4 +135,4 @@ steps = [
 
 [[orchestration.profiles]]
 name = "markdown-quality"
-steps = ["Markdown repository links and graph", "Markdown lint"]
+includes = ["markdown"]

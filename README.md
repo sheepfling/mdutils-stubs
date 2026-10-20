@@ -70,11 +70,12 @@ The API audit compares the checked-out stubs with the installed pinned runtime;
 the consumer type checkers therefore see the installed wheel. See
 [API-COVERAGE.md](API-COVERAGE.md) for the limits and compatibility procedure.
 
-## Optional side validation
+## Source policy selection
 
-[quality-gates.toml](quality-gates.toml) contains optional local Alphus and
-Markdown profiles. Those source and Markdown profiles remain advisory. The shared build, API,
-and example-verification tooling is described below.
+[quality-gates.toml](quality-gates.toml) retains the optional `stub-package`
+source-policy profile. The default `check` profile runs the stub verifier,
+native Python lint/format checks, and native Markdown checks; any failing stage
+fails that selection. The shared verification tooling is described below.
 
 ## Maintenance
 
@@ -108,3 +109,20 @@ the Git requirement. The consumer wheel has no Alphus runtime dependency.
 Python 3.10 matrix jobs can use a reviewed source checkout via
 `PYTHONPATH=/path/to/alphus/src`, with the same tool dependencies provisioned.
 The main Alphus CLI still requires Python 3.11 or later.
+
+### Consumer profiles
+
+The `check` profile composes `stubs`, `python`, and `markdown`. Run the complete
+selection with the installed pinned Alphus tooling:
+
+```shell
+alphus --root . --config quality-gates.toml --run --profile check
+```
+
+Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
+part. The stub stage builds and installs the wheel before later tooling runs.
+The shared `ci/quality` action executes this same composition once. Each
+repository retains its native tool settings, examples and API expectations;
+Alphus owns the repeated checking mechanisms and their regression tests.
+The API adapter tests run in the stub stage; the aggregate does not repeat them
+through pytest. Direct pytest remains available for working on that adapter.
