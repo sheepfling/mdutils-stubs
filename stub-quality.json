@@ -5,6 +5,10 @@
     "positive_fixture": "tests/fixtures/positive.py",
     "negative_fixture": "tests/fixtures/negative.py",
     "negative_expected_count": 7,
+    "typing_checkers": [
+      "mypy",
+      "pyright"
+    ],
     "mypy_diagnostics": [
       "Argument \"file_name\"",
       "Argument \"level\"",

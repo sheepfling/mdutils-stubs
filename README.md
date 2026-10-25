@@ -65,6 +65,9 @@ python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
 python -m twine check dist/*
 ```
 
+The Python fixture entry point reads stub-quality.json and delegates to
+Alphus's installed alphus-typing-fixtures CLI.
+
 The tests package is repository tooling and is not installed in the stub wheel.
 The API audit compares the checked-out stubs with the installed pinned runtime;
 the consumer type checkers therefore see the installed wheel. See
@@ -101,7 +104,7 @@ in a dedicated Python 3.11+ verification environment:
 
 ```shell
 python -m pip install -r requirements-quality.txt
-python -m alphus_stub_quality.verify --root . --config stub-quality.json --with-twine
+alphus-stub-quality --root . --config stub-quality.json --with-twine
 ```
 
 For an unpublished local candidate, install its built Alphus wheel instead of
@@ -115,7 +118,7 @@ checker as above, use a Python 3.10 target:
 python3.10 -m venv /path/to/target
 /path/to/target/bin/python -m pip install -r requirements-target.txt \
   -r requirements/compatibility.txt
-python -m alphus_stub_quality.verify --root . --config stub-quality.json \
+alphus-stub-quality --root . --config stub-quality.json \
   --with-twine --target-python /path/to/target/bin/python --report target-result.json
 ```
 

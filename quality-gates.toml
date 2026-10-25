@@ -95,7 +95,7 @@ argv = [
 kind = "command"
 name = "Build and verify the installed consumer surface"
 argv = [
-  "{python}", "-m", "alphus_stub_quality.verify", "--root", "{root}",
+  "alphus-stub-quality", "--root", "{root}",
   "--config", "stub-quality.json", "--with-twine",
 ]
 
