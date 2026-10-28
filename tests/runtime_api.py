@@ -127,11 +127,14 @@ with TemporaryDirectory(prefix="mdutils-stubs-runtime-") as temporary_directory:
     path = Path(temporary_directory) / "sample.md"
     markdown_file = MarkDownFile(str(path))
     markdown_file.rewrite_all_file("first\nsecond\nthird")
-    assert MarkDownFile.read_file(str(path)) == "first\nsecond\nthird"
+    contents = MarkDownFile.read_file(str(path))
+    assert contents == "first\nsecond\nthird"
     markdown_file.append_after_second_line("inserted")
-    assert MarkDownFile.read_file(str(path)) == "first\nsecond\ninserted\nthird"
+    contents = MarkDownFile.read_file(str(path))
+    assert contents == "first\nsecond\ninserted\nthird"
     markdown_file.append_end("\nlast")
-    assert MarkDownFile.read_file(str(path)) == "first\nsecond\ninserted\nthird\nlast"
+    contents = MarkDownFile.read_file(str(path))
+    assert contents == "first\nsecond\ninserted\nthird\nlast"
 
 assert doc.reference.get_references_as_markdown() == "\n\n\n[site]: https://example.com\n"
 assert (

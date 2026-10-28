@@ -47,9 +47,10 @@ include a py.typed marker.
 
 ## Local checks
 
-Use a Python 3.11+ verification environment. From the repository root, install
-the development tools, pinned Alphus tooling and runtime, then build and install
-the wheel before running the consumer checks:
+Use a Python 3.11+ verification environment. The pinned Alphus tools are in a
+separate maintainer requirements file; they are not part of the stub package's
+runtime dependencies. From the repository root, install the development tools,
+runtime and optional verification tools, then build and install the wheel:
 
 ```shell
 python -m pip install ".[dev]" -r requirements/compatibility.txt
@@ -65,7 +66,7 @@ python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
 python -m twine check dist/*
 ```
 
-The Python fixture entry point reads stub-quality.json and delegates to
+The Python fixture entry point validates stub-quality.json and delegates to
 Alphus's installed alphus-typing-fixtures CLI.
 
 The tests package is repository tooling and is not installed in the stub wheel.
@@ -78,7 +79,8 @@ the consumer type checkers therefore see the installed wheel. See
 [quality-gates.toml](quality-gates.toml) retains the optional `stub-package`
 source-policy profile. The default `check` profile runs the stub verifier,
 native Python lint/format checks, and native Markdown checks; any failing stage
-fails that selection. The shared verification tooling is described below.
+fails that selection. The `stub-package` profile is excluded from the default
+selection.
 
 ## Maintenance
 
@@ -96,53 +98,9 @@ These declarations describe the public API of MIT-licensed
 [didix21/mdutils](https://github.com/didix21/mdutils). The stub package does not
 copy the upstream runtime implementation. See [LICENSE](LICENSE).
 
-### Shared verification tooling
+### Optional Alphus verification
 
-The reusable example runner and AST/API assertions come from the reviewed
-Alphus revision recorded in `requirements-quality.txt`. Install that tooling
-in a dedicated Python 3.11+ verification environment:
-
-```shell
-python -m pip install -r requirements-quality.txt
-alphus-stub-quality --root . --config stub-quality.json --with-twine
-```
-
-For an unpublished local candidate, install its built Alphus wheel instead of
-the Git requirement. The consumer wheel has no Alphus runtime dependency.
-Alphus and native Mypy/Pyright run in a Python 3.11+ checker environment.
-Build/install, API audit, native stubtest and smoke execute in a distinct target
-venv. The target does not install Alphus. For example, after provisioning the
-checker as above, use a Python 3.10 target:
-
-```shell
-python3.10 -m venv /path/to/target
-/path/to/target/bin/python -m pip install -r requirements-target.txt \
-  -r requirements/compatibility.txt
-alphus-stub-quality --root . --config stub-quality.json \
-  --with-twine --target-python /path/to/target/bin/python --report target-result.json
-```
-
-Repeat with each Python target 3.10–3.14. Both native static checkers explicitly
-select that target's packages and language version; the JSON report records
-checker/target identities and each executed stage. Failed target checks stop the
-run without falling back to the checker.
-
-### Consumer profiles
-
-The `check` profile composes `stubs`, `python`, and `markdown`. Run the complete
-selection with the installed pinned Alphus tooling:
-
-```shell
-alphus --root . --config quality-gates.toml --run --profile check
-```
-
-Use `--profile stubs`, `--profile python`, or `--profile markdown` to run one
-part. The stub stage builds and installs the wheel before later tooling runs.
-Hosted CI runs `quality` (`python` plus `markdown`) once and the shared
-`ci/stub-quality` action once per target 3.10–3.14, using checker Python 3.12.
-It runs only after a merged PR or manual dispatch. Both action references and
-`requirements-quality.txt` pin the same immutable Alphus commit. Each
-repository retains its native tool settings, examples and API expectations;
-Alphus owns the repeated checking mechanisms and their regression tests.
-The API adapter tests run in the stub stage; the aggregate does not repeat them
-through pytest. Direct pytest remains available for working on that adapter.
+Alphus is a development-only verifier pinned in `requirements-quality.txt`; it
+is not installed by consumers of `mdutils-stubs`. Its setup, target-environment
+commands and profile selection are documented in
+[ALPHUS-VERIFICATION.md](docs/ALPHUS-VERIFICATION.md).

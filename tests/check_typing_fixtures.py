@@ -3,54 +3,72 @@
 from __future__ import annotations
 
 import argparse
-import json
-import os
+import shutil
 import subprocess
-import sys
+import sysconfig
 from pathlib import Path
-from typing import Any
+
+from pydantic import BaseModel, ConfigDict, Field
+
+
+class VerificationSettings(BaseModel):
+    """Typed settings used by the repository's fixture adapter."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    positive_fixture: str
+    negative_fixture: str
+    typing_checkers: tuple[str, ...] = Field(default=("mypy", "pyright"), min_length=1)
+    negative_expected_count: int | None = None
+    mypy_diagnostics: tuple[str, ...] = ()
+    pyright_diagnostics: tuple[str, ...] = ()
+
+
+class StubQualityConfig(BaseModel):
+    """Validate the repository config envelope before reading fixture settings."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    verification: VerificationSettings
 
 
 def _typing_cli() -> Path:
-    """Locate the installed Alphus console script beside this interpreter."""
-    name = "alphus-typing-fixtures.exe" if os.name == "nt" else "alphus-typing-fixtures"
-    executable = Path(sys.executable).parent / name
-    if not executable.is_file():
+    """Find the installed Alphus command in this interpreter's scripts directory."""
+    scripts_directory = sysconfig.get_path("scripts")
+    if scripts_directory is None:
+        raise FileNotFoundError("Python did not report a scripts directory")
+    executable = shutil.which("alphus-typing-fixtures", path=scripts_directory)
+    if executable is None:
         raise FileNotFoundError(
-            f"{executable} is missing; install the Alphus development tools "
+            f"alphus-typing-fixtures is missing from {scripts_directory}; "
+            "install the Alphus development tools "
             "from requirements-quality.txt"
         )
-    return executable
+    return Path(executable)
 
 
-def _settings(root: Path) -> dict[str, Any]:
-    config = json.loads((root / "stub-quality.json").read_text(encoding="utf-8"))
-    verification = config.get("verification")
-    if not isinstance(verification, dict):
-        raise ValueError("stub-quality.json must contain a verification object")
-    return verification
+def _settings(root: Path) -> VerificationSettings:
+    config_text = (root / "stub-quality.json").read_text(encoding="utf-8")
+    return StubQualityConfig.model_validate_json(config_text).verification
 
 
-def _command(root: Path, settings: dict[str, Any]) -> list[str]:
-    checkers = settings.get("typing_checkers", ["mypy", "pyright"])
-    if not isinstance(checkers, list) or not checkers:
-        raise ValueError("verification.typing_checkers must be a non-empty list")
+def _command(root: Path, settings: VerificationSettings) -> list[str]:
     command = [
         str(_typing_cli()),
         "--root",
         str(root),
         "--positive-fixture",
-        str((root / settings["positive_fixture"]).resolve()),
+        str((root / settings.positive_fixture).resolve()),
         "--negative-fixture",
-        str((root / settings["negative_fixture"]).resolve()),
+        str((root / settings.negative_fixture).resolve()),
         "--checkers",
-        *checkers,
+        *settings.typing_checkers,
     ]
-    expected_count = settings.get("negative_expected_count")
+    expected_count = settings.negative_expected_count
     if expected_count is not None:
         command.extend(("--expected-count", str(expected_count)))
     for checker in ("mypy", "pyright"):
-        for diagnostic in settings.get(f"{checker}_diagnostics", []):
+        for diagnostic in getattr(settings, f"{checker}_diagnostics"):
             command.extend((f"--{checker}-diagnostic", diagnostic))
     return command
 
@@ -61,7 +79,7 @@ def main() -> int:
     root = parser.parse_args().root.expanduser().resolve()
     try:
         command = _command(root, _settings(root))
-    except (FileNotFoundError, KeyError, json.JSONDecodeError, ValueError) as error:
+    except (FileNotFoundError, ValueError) as error:
         parser.error(str(error))
     return subprocess.run(command, cwd=root, check=False).returncode
 
