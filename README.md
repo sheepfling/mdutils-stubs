@@ -47,14 +47,12 @@ include a py.typed marker.
 
 ## Local checks
 
-Use a Python 3.11+ verification environment. The pinned Alphus tools are in a
-separate maintainer requirements file; they are not part of the stub package's
-runtime dependencies. From the repository root, install the development tools,
-runtime and optional verification tools, then build and install the wheel:
+From the repository root, install the local tools and exact target runtime
+from the `dev` and `target` dependency groups, then build and install the wheel:
 
 ```shell
-python -m pip install ".[dev]" -r requirements/compatibility.txt
-python -m pip install -r requirements-quality.txt
+python -m pip install --upgrade pip
+python -m pip install --group dev --group target
 SETUPTOOLS_SCM_PRETEND_VERSION=1.8.1.0 python -m build
 python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
 python -m ruff check .
@@ -66,12 +64,13 @@ python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
 python -m twine check dist/*
 ```
 
-The Python fixture entry point validates stub-quality.json and delegates to
-Alphus's installed alphus-typing-fixtures CLI.
+The Python fixture entry point reads stub-quality.json and invokes native MyPy
+and Pyright modules without shell commands or Alphus. It checks the positive
+fixture and requires every expected negative diagnostic to remain present.
 
 The tests package is repository tooling and is not installed in the stub wheel.
-The API audit compares the checked-out stubs with the installed pinned runtime;
-the consumer type checkers therefore see the installed wheel. See
+The optional Alphus profile runs the structural API audit against the installed
+pinned runtime; the native CI suite does not import that audit. See
 [API-COVERAGE.md](API-COVERAGE.md) for the limits and compatibility procedure.
 
 ## Source policy selection
@@ -100,7 +99,14 @@ copy the upstream runtime implementation. See [LICENSE](LICENSE).
 
 ### Optional Alphus verification
 
-Alphus is a development-only verifier pinned in `requirements-quality.txt`; it
+Alphus is a development-only verifier in the `local-alphus` dependency group; it
 is not installed by consumers of `mdutils-stubs`. Its setup, target-environment
 commands and profile selection are documented in
 [ALPHUS-VERIFICATION.md](docs/ALPHUS-VERIFICATION.md).
+
+The hosted workflow does not install or call Alphus until it is published on
+PyPI. Its native checks run on Python targets 3.10–3.15, including the installed
+wheel, positive and expected-negative typing fixtures, pytest runtime probe,
+native stubtest, and package build. Python 3.15 is included as a compatibility
+target; it does not change the declared support metadata or establish a local
+3.15 result.

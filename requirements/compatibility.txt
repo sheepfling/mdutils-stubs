@@ -1,2 +1,0 @@
-# Exact runtime used for the supported API baseline and local compatibility checks.
-mdutils==1.8.1

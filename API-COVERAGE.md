@@ -14,7 +14,7 @@ compatibility claim.
 
 ## Audit scope
 
-The version-specific audit manifest in tests/test_api_coverage.py identifies
+The version-specific audit manifest in tests/api_coverage.py identifies
 runtime modules, package exports, and re-export targets. The test discovers the
 actual installed runtime and compares that scope with the stub tree. It checks:
 
@@ -63,10 +63,10 @@ python -m tests.runtime_api
 python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
 ```
 
-Pytest runs the API audit against the checked-out stub tree and the installed
-runtime. The typing runner uses the current interpreter to invoke each checker
-without a shell. The runtime module invokes the installed library and asserts
-selected observable output.
+The optional Alphus profile runs the API audit against the selected stub tree
+and installed runtime. The native pytest suite exercises the runtime module;
+the typing runner invokes each checker without a shell and verifies the exact
+expected negative fixture diagnostics.
 
 ## Updating the baseline
 

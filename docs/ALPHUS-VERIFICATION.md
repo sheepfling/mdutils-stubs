@@ -6,7 +6,9 @@ Alphus is a maintainer-side verification tool, not a dependency of the
 3.11+ checker environment:
 
 ```sh
-python -m pip install -r requirements-quality.txt
+python -m pip install --upgrade pip
+python -m pip install --group dev --group local-alphus
+python -m pip install --group target
 alphus --root . --config quality-gates.toml --run --profile check
 ```
 
@@ -26,18 +28,19 @@ Pyright remain in the checker environment:
 alphus-stub-quality --root . --config stub-quality.json --with-twine
 ```
 
-To select another installed Python interpreter, provision it with
-`requirements-target.txt` and `requirements/compatibility.txt`, then pass its
-path explicitly:
+To select another installed Python interpreter, provision it from the `target`
+dependency group, then pass its path explicitly:
 
 ```sh
-/path/to/target/bin/python -m pip install -r requirements-target.txt \
-  -r requirements/compatibility.txt
+python -m pip install --upgrade pip
+/path/to/target/bin/python -m pip install --group target
+export ALPHUS_TARGET_PYTHON=/path/to/target/bin/python
 alphus-stub-quality --root . --config stub-quality.json --with-twine \
   --target-python /path/to/target/bin/python --report target-result.json
 ```
 
 The target environment does not install Alphus. The built stub wheel contains no
-Alphus runtime dependency. CI invokes the quality and compatibility actions only
-for merged pull requests or manual dispatch; an ordinary pull request update
-does not start these optional checks.
+Alphus runtime dependency. Hosted CI does not install or call Alphus until it is
+available on PyPI; it runs native quality, wheel, typing, pytest runtime, and
+stubtest checks on Python 3.10–3.15. It runs only for merged pull requests or
+manual dispatch; an ordinary pull request update does not start the workflow.

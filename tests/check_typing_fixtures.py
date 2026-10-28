@@ -1,87 +1,190 @@
-"""Run mdutils's configured consumer fixtures through Alphus's supported CLI."""
+"""Run positive and expected-negative fixtures with native Mypy and Pyright."""
 
 from __future__ import annotations
 
 import argparse
-import shutil
+import json
+import re
 import subprocess
-import sysconfig
+import sys
+import tempfile
 from pathlib import Path
-
-from pydantic import BaseModel, ConfigDict, Field
-
-
-class VerificationSettings(BaseModel):
-    """Typed settings used by the repository's fixture adapter."""
-
-    model_config = ConfigDict(extra="ignore")
-
-    positive_fixture: str
-    negative_fixture: str
-    typing_checkers: tuple[str, ...] = Field(default=("mypy", "pyright"), min_length=1)
-    negative_expected_count: int | None = None
-    mypy_diagnostics: tuple[str, ...] = ()
-    pyright_diagnostics: tuple[str, ...] = ()
+from typing import Any
 
 
-class StubQualityConfig(BaseModel):
-    """Validate the repository config envelope before reading fixture settings."""
+def _target_version(target_python: Path) -> str:
+    output = subprocess.run(
+        [
+            str(target_python),
+            "-c",
+            "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')",
+        ],
+        check=True,
+        capture_output=True,
+        text=True,
+    ).stdout
+    return output.strip()
 
-    model_config = ConfigDict(extra="ignore")
 
-    verification: VerificationSettings
-
-
-def _typing_cli() -> Path:
-    """Find the installed Alphus command in this interpreter's scripts directory."""
-    scripts_directory = sysconfig.get_path("scripts")
-    if scripts_directory is None:
-        raise FileNotFoundError("Python did not report a scripts directory")
-    executable = shutil.which("alphus-typing-fixtures", path=scripts_directory)
-    if executable is None:
-        raise FileNotFoundError(
-            f"alphus-typing-fixtures is missing from {scripts_directory}; "
-            "install the Alphus development tools "
-            "from requirements-quality.txt"
+def _command(
+    checker: str, fixture: Path, config: Path, target_python: Path, version: str
+) -> list[str]:
+    command = [sys.executable, "-m", checker]
+    if checker == "mypy":
+        command.extend(
+            (
+                "--config-file",
+                str(config),
+                "--python-executable",
+                str(target_python),
+                "--python-version",
+                version,
+                "--no-incremental",
+            )
         )
-    return Path(executable)
-
-
-def _settings(root: Path) -> VerificationSettings:
-    config_text = (root / "stub-quality.json").read_text(encoding="utf-8")
-    return StubQualityConfig.model_validate_json(config_text).verification
-
-
-def _command(root: Path, settings: VerificationSettings) -> list[str]:
-    command = [
-        str(_typing_cli()),
-        "--root",
-        str(root),
-        "--positive-fixture",
-        str((root / settings.positive_fixture).resolve()),
-        "--negative-fixture",
-        str((root / settings.negative_fixture).resolve()),
-        "--checkers",
-        *settings.typing_checkers,
-    ]
-    expected_count = settings.negative_expected_count
-    if expected_count is not None:
-        command.extend(("--expected-count", str(expected_count)))
-    for checker in ("mypy", "pyright"):
-        for diagnostic in getattr(settings, f"{checker}_diagnostics"):
-            command.extend((f"--{checker}-diagnostic", diagnostic))
+    else:
+        command.extend(
+            (
+                "--project",
+                str(config),
+                "--pythonpath",
+                str(target_python),
+                "--pythonversion",
+                version,
+            )
+        )
+    command.append(str(fixture))
     return command
+
+
+def _diagnostic_lines(checker: str, output: str, fixture_name: str) -> dict[int, list[str]]:
+    pattern = r"^.*?:(\d+): error:" if checker == "mypy" else r"^.*?:(\d+):\d+ - error:"
+    diagnostics: dict[int, list[str]] = {}
+    for line in output.splitlines():
+        match = re.search(pattern, line)
+        if fixture_name in line and match is not None:
+            diagnostics.setdefault(int(match.group(1)), []).append(line)
+    return diagnostics
+
+
+def _run(checker: str, fixture: Path, config: Path, target: Path, version: str) -> tuple[int, str]:
+    with tempfile.TemporaryDirectory(prefix="stub-fixture-check-") as directory:
+        result = subprocess.run(
+            _command(checker, fixture, config, target, version),
+            cwd=directory,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    return result.returncode, result.stdout + result.stderr
+
+
+def _expected_errors(
+    root: Path, negative: Path, config: dict[str, Any], checker: str
+) -> tuple[set[int] | None, int | None, list[str]]:
+    lines = {
+        number
+        for number, line in enumerate(negative.read_text(encoding="utf-8").splitlines(), start=1)
+        if "# expect-error" in line
+    }
+    if lines:
+        return lines, None, []
+    verification = config.get("verification", {})
+    expected_count = verification.get("negative_expected_count")
+    if not isinstance(expected_count, int) or expected_count < 1:
+        raise ValueError(
+            "negative fixture must use # expect-error markers or set negative_expected_count"
+        )
+    diagnostics = verification.get(f"{checker}_diagnostics", [])
+    if not isinstance(diagnostics, list) or any(not isinstance(item, str) for item in diagnostics):
+        raise ValueError(f"{checker}_diagnostics must be a list of strings")
+    return None, expected_count, diagnostics
+
+
+def _check(root: Path, config: dict[str, Any], checker: str, target: Path, version: str) -> bool:
+    verification = config.get("verification", {})
+    positive = (root / verification["positive_fixture"]).resolve()
+    negative = (root / verification["negative_fixture"]).resolve()
+    if not positive.is_file() or not negative.is_file():
+        raise ValueError("configured positive or negative typing fixture is missing")
+
+    positive_status, positive_output = _run(
+        checker, positive, root / "pyproject.toml", target, version
+    )
+    positive_errors = _diagnostic_lines(checker, positive_output, positive.name)
+    if positive_status != 0 or positive_errors:
+        print(f"FAIL {checker} positive fixture:\n{positive_output}", file=sys.stderr)
+        return False
+    print(f"PASS {checker} positive fixture for Python {version}")
+
+    expected_lines, expected_count, expected_messages = _expected_errors(
+        root, negative, config, checker
+    )
+    negative_status, negative_output = _run(
+        checker, negative, root / "pyproject.toml", target, version
+    )
+    actual = _diagnostic_lines(checker, negative_output, negative.name)
+    if negative_status == 0:
+        print(f"FAIL {checker} accepted the negative fixture:\\n{negative_output}", file=sys.stderr)
+        return False
+    if expected_lines is not None:
+        if set(actual) != expected_lines:
+            found = {line: len(items) for line, items in actual.items()}
+            print(
+                f"FAIL {checker} negative fixture: expected errors on marked lines "
+                f"{sorted(expected_lines)}, found {found}\n"
+                f"{negative_output}",
+                file=sys.stderr,
+            )
+            return False
+    elif sum(map(len, actual.values())) != expected_count:
+        print(
+            f"FAIL {checker} negative fixture: expected {expected_count} errors, "
+            f"found {sum(map(len, actual.values()))}\n{negative_output}",
+            file=sys.stderr,
+        )
+        return False
+    missing = [
+        message
+        for message in expected_messages
+        if message.casefold() not in negative_output.casefold()
+    ]
+    if missing:
+        print(
+            f"FAIL {checker} negative fixture missing expected diagnostics {missing}:\n"
+            f"{negative_output}",
+            file=sys.stderr,
+        )
+        return False
+    count = len(expected_lines) if expected_lines is not None else expected_count
+    print(f"PASS {checker} rejected {count} expected invalid calls for Python {version}")
+    return True
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--root", required=True, type=Path)
-    root = parser.parse_args().root.expanduser().resolve()
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[1])
+    parser.add_argument("--target-python", type=Path, default=Path(sys.executable))
+    args = parser.parse_args()
+    root = args.root.expanduser().resolve()
+    target = args.target_python.expanduser().absolute()
+    config_path = root / "stub-quality.json"
     try:
-        command = _command(root, _settings(root))
-    except (FileNotFoundError, ValueError) as error:
+        config = json.loads(config_path.read_text(encoding="utf-8"))
+        version = _target_version(target)
+        checkers = config["verification"].get("typing_checkers", ["mypy", "pyright"])
+        if (
+            not isinstance(checkers, list)
+            or not checkers
+            or any(checker not in {"mypy", "pyright"} for checker in checkers)
+        ):
+            raise ValueError("typing_checkers must contain mypy and/or pyright")
+        for checker in checkers:
+            if not _check(root, config, checker, target, version):
+                return 1
+    except (OSError, KeyError, TypeError, ValueError, json.JSONDecodeError) as error:
         parser.error(str(error))
-    return subprocess.run(command, cwd=root, check=False).returncode
+    return 0
 
 
 if __name__ == "__main__":

@@ -27,7 +27,7 @@
       "parameter \"items\" of type \"list[_ListItem]\"",
       "parameter \"text\" of type \"str\""
     ],
-    "api_audit_module": "tests.test_api_coverage",
+    "api_audit_module": "tests.api_coverage",
     "api_audit_args": [
       "--stub-root",
       "{source}/mdutils-stubs"
