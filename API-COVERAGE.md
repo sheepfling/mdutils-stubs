@@ -50,6 +50,11 @@ accept recursive lists of those strings. Text formatting, inline link, and
 image helpers return strings, so those results satisfy the same contract.
 Non-string objects are not modeled as list leaves.
 
+The upstream `MDList` and `MDCheckbox` docstrings describe `items` as `[str]`,
+while their implementations also recurse into nested lists. The stubs model
+that nested-list behavior. Non-string leaves remain unsupported: the runtime
+passes each leaf to string methods such as `startswith`.
+
 ## Run the audit
 
 Run these commands from the repository root with mdutils 1.8.1 and the

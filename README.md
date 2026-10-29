@@ -64,13 +64,29 @@ python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
 python -m twine check dist/*
 ```
 
+These native checks select only the `dev` and `target` dependency groups. They
+were validated in a fresh environment while Git access was blocked. Alphus is
+installed by an explicit Git URL only for optional trials and is not declared
+in `pyproject.toml`, so the project metadata supplied to uv has no Alphus Git
+source to resolve. uv itself was not installed in the validation environment;
+the expected resolution behavior is based on the project metadata and uv's
+documentation, not a direct uv run. uv resolves all declared dependency groups
+when creating a lockfile and may lock before sync/run if the lock is absent or
+stale. See uv's [dependency-group resolution] and [automatic lock behavior]
+documentation.
+
+[dependency-group resolution]: https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
+[automatic lock behavior]: https://docs.astral.sh/uv/concepts/projects/sync/#automatic-lock-and-sync
+
 The Python fixture entry point reads stub-quality.json and invokes native MyPy
 and Pyright modules without shell commands or Alphus. It checks the positive
 fixture and requires every expected negative diagnostic to remain present.
 
 The tests package is repository tooling and is not installed in the stub wheel.
 The optional Alphus profile runs the structural API audit against the installed
-pinned runtime; the native CI suite does not import that audit. See
+pinned runtime; the native CI suite does not import that audit. Alphus's Git
+URL is deliberately not declared in `pyproject.toml`, so ordinary project
+resolution and uv lock/sync do not include it. See
 [API-COVERAGE.md](API-COVERAGE.md) for the limits and compatibility procedure.
 
 ## Source policy selection
@@ -99,9 +115,9 @@ copy the upstream runtime implementation. See [LICENSE](LICENSE).
 
 ### Optional Alphus verification
 
-Alphus is a development-only verifier in the `local-alphus` dependency group; it
-is not installed by consumers of `mdutils-stubs`. Its setup, target-environment
-commands and profile selection are documented in
+Alphus is an experimental maintainer verifier and is not installed by consumers
+of `mdutils-stubs` or included in project dependency groups. Its direct Git
+install, target-environment commands and profile selection are documented in
 [ALPHUS-VERIFICATION.md](docs/ALPHUS-VERIFICATION.md).
 
 The hosted workflow does not install or call Alphus until it is published on
