@@ -78,9 +78,11 @@ documentation.
 [dependency-group resolution]: https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
 [automatic lock behavior]: https://docs.astral.sh/uv/concepts/projects/sync/#automatic-lock-and-sync
 
-The Python fixture entry point reads stub-quality.json and invokes native MyPy
-and Pyright modules without shell commands or Alphus. It checks the positive
-fixture and requires every expected negative diagnostic to remain present.
+The Python fixture entry point reads stub-quality.json into a validated
+configuration and invokes native MyPy and Pyright modules without shell
+commands or Alphus. It checks that fixture paths stay inside the repository,
+checks the positive fixture, and requires every expected negative diagnostic
+to remain present. Pytest covers valid and invalid configuration values.
 
 The tests package is repository tooling and is not installed in the stub wheel.
 The optional Alphus profile runs the structural API audit against the installed

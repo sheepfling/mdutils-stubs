@@ -2,8 +2,8 @@
 
 from __future__ import annotations
 
-import runpy
+from tests.runtime_api import main
 
 
 def test_runtime_api_consumer() -> None:
-    runpy.run_module("tests.runtime_api", run_name="__main__")
+    main()
