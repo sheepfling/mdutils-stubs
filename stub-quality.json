@@ -15,7 +15,7 @@
       "Argument \"title\"",
       "List item 0",
       "Argument \"text_align\"",
-      "list[_ListItem]",
+      "Sequence[_ListItem]",
       "Argument \"text\""
     ],
     "pyright_diagnostics": [
@@ -24,7 +24,7 @@
       "parameter \"title\"",
       "parameter \"text\" of type \"list[str]\"",
       "parameter \"text_align\"",
-      "parameter \"items\" of type \"list[_ListItem]\"",
+      "parameter \"items\" of type \"Sequence[_ListItem]\"",
       "parameter \"text\" of type \"str\""
     ],
     "api_audit_module": "tests.api_coverage",

@@ -1,4 +1,5 @@
-from mdutils import MDCheckbox, MDList, MdUtils, TextUtils
+from mdutils import MDList, MdUtils, TextUtils
+from mdutils.tools.MDList import MDCheckbox
 
 document = MdUtils(file_name=42)
 document.new_header(level="first", title=7)
