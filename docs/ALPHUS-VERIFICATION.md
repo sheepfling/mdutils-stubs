@@ -8,15 +8,15 @@ Alphus is a maintainer-side verification tool, not a dependency of the
 ```sh
 python -m pip install --upgrade pip
 python -m pip install --group dev --group target
-python -m pip install "alphus @ git+https://github.com/sheepfling/alphus.git@b4b6055a6ae0286912b461cd2b4262b3318c5a0c"
+python -m pip install --group dev-experimental
 alphus --root . --config quality-gates.toml --run --profile check
 ```
 
-The Git-based install is intentionally an explicit, experimental opt-in and is
-not declared in `pyproject.toml`. uv resolves declared dependency groups when
-creating a lockfile; since this Git source is outside the project metadata, it
-is not part of normal `uv lock`/`uv sync` resolution. uv was not installed in
-the validation environment, so no uv command was run.
+The Git-based install is isolated in `dev-experimental`; ordinary pip setup and
+hosted CI select only `dev` and `target`. uv resolves all declared dependency
+groups when creating or refreshing a lockfile, so `uv lock` may require Git
+access to this experimental group. uv was not installed in the validation
+environment, so no uv command was run.
 
 The default `check` profile combines `stubs`, `python`, and `markdown`. Individual
 profiles can be selected with `--profile stubs`, `--profile python`, or

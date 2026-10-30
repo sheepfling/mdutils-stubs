@@ -64,16 +64,16 @@ python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
 python -m twine check dist/*
 ```
 
-These native checks select only the `dev` and `target` dependency groups. They
-were validated in a fresh environment while Git access was blocked. Alphus is
-installed by an explicit Git URL only for optional trials and is not declared
-in `pyproject.toml`, so the project metadata supplied to uv has no Alphus Git
-source to resolve. uv itself was not installed in the validation environment;
-the expected resolution behavior is based on the project metadata and uv's
-documentation, not a direct uv run. uv resolves all declared dependency groups
-when creating a lockfile and may lock before sync/run if the lock is absent or
-stale. See uv's [dependency-group resolution] and [automatic lock behavior]
-documentation.
+These native checks select only the `dev` and `target` dependency groups. The
+optional `dev-experimental` group contains the pinned Alphus Git dependency and
+is not installed by the command above or by hosted CI. A no-index pip dry run
+of the native groups passed with Git blocked in the current validation; it
+reused the existing isolated tool environment and is not a cold-install result.
+uv resolves all declared dependency groups when creating or refreshing a
+lockfile, even when a later sync selects only `dev`; `uv lock` may therefore
+require Git access to the experimental group. uv was not available in this
+validation environment, so that behavior was not tested directly. See uv's
+[dependency-group resolution] and [automatic lock behavior] documentation.
 
 [dependency-group resolution]: https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
 [automatic lock behavior]: https://docs.astral.sh/uv/concepts/projects/sync/#automatic-lock-and-sync
@@ -86,9 +86,9 @@ to remain present. Pytest covers valid and invalid configuration values.
 
 The tests package is repository tooling and is not installed in the stub wheel.
 The optional Alphus profile runs the structural API audit against the installed
-pinned runtime; the native CI suite does not import that audit. Alphus's Git
-URL is deliberately not declared in `pyproject.toml`, so ordinary project
-resolution and uv lock/sync do not include it. See
+pinned runtime; the native CI suite does not import that audit. The pinned Git
+dependency lives only in `dev-experimental`; the ordinary pip setup and CI use
+only `dev` and `target`. See
 [API-COVERAGE.md](API-COVERAGE.md) for the limits and compatibility procedure.
 
 ## Source policy selection
