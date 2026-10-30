@@ -33,9 +33,9 @@ documentation counts.
 ## Behavioral and consumer checks
 
 tests/fixtures/positive.py imports package exports and exercises public
-callables for mypy and Pyright. tests/fixtures/negative.py covers invalid
+callables for MyPy, Pyright, and ty. tests/fixtures/negative.py covers invalid
 arguments and rejects non-string nested list leaves. The typing runner requires
-both checkers to accept the positive fixture and to emit the expected
+all three checkers to accept the positive fixture and to emit the expected
 diagnostics for the negative fixture.
 
 The runtime checks cover selected behavior such as recursive lists and tables
