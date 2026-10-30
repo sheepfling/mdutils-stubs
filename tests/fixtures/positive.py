@@ -1,4 +1,4 @@
-from typing import TextIO
+from typing import TextIO, TypeAlias
 
 import mdutils
 from mdutils import (
@@ -74,6 +74,8 @@ from typing_extensions import assert_type
 document: MdUtils = MdUtils(
     file_name="example", title="Example", author="Rick", title_header_style="atx"
 )
+
+_ListItem: TypeAlias = str | list["_ListItem"]
 assert_type(document, MdUtils)
 assert_type(MdUtils, type[MdUtils])
 assert_type(MDList, type[MDList])
@@ -122,7 +124,7 @@ assert_type(document.new_reference_image("alt", "image.png", reference_tag=None)
 assert_type(document.new_list(["one", ["nested", ["deeper"]]]), None)
 assert_type(document.new_checkbox_list(["one", ["nested"]], checked=True), None)
 flat_list_items: list[str] = ["one", "two"]
-recursive_list_items: list[str | list[str | list[str]]] = [
+recursive_list_items: list[_ListItem] = [
     "one",
     ["nested", ["deeper"]],
 ]

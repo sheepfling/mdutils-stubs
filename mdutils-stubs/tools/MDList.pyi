@@ -1,7 +1,7 @@
 from collections.abc import Sequence as _Sequence
 from typing import TypeAlias
 
-_ListItem: TypeAlias = str | _Sequence["_ListItem"]
+_ListItem: TypeAlias = str | list["_ListItem"]
 
 class MDListHelper:
     n_tabs: int

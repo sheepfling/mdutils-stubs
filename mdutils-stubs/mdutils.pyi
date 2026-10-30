@@ -16,7 +16,7 @@ from .tools.MDList import MDCheckbox as MDCheckbox
 from .tools.MDList import MDList as MDList
 from .tools.TextUtils import TextUtils as TextUtils
 
-_ListItem: TypeAlias = str | _Sequence["_ListItem"]
+_ListItem: TypeAlias = str | list["_ListItem"]
 
 class MdUtils:
     file_name: str

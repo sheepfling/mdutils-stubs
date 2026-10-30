@@ -34,6 +34,19 @@ MdUtils("out").new_list(items)
 ```
 
 Runtime and type-checking fixtures verify these helper-generated list entries.
+Nested entries must be actual lists; a tuple or other sequence nested within a
+list is not supported. For a separately annotated recursive variable, define a
+recursive alias so list invariance does not widen nested values to unsupported
+sequences:
+
+```python
+from mdutils import MdUtils
+from typing import TypeAlias
+
+ListItem: TypeAlias = str | list["ListItem"]
+items: list[ListItem] = ["parent", ["child", ["grandchild"]]]
+MdUtils("out").new_list(items)
+```
 
 ## Installation
 
