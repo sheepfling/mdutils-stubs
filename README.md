@@ -126,5 +126,7 @@ The hosted workflow does not install or call Alphus until it is published on
 PyPI. Its native checks run on Python targets 3.10–3.15, including the installed
 wheel, positive and expected-negative typing fixtures, pytest runtime probe,
 native stubtest, and package build. Python 3.15 is included as a compatibility
-target; it does not change the declared support metadata or establish a local
-3.15 result.
+target. A local CPython 3.15.2 check also passed the installed-wheel consumer
+typing fixtures and runtime API check against mdutils 1.8.1; this does not
+establish a hosted matrix run, change support metadata, or prove every runtime
+behavior.
