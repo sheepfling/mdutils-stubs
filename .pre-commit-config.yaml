@@ -3,31 +3,37 @@ repos:
     hooks:
       - id: ruff-check
         name: Ruff lint
-        entry: ruff check .
+        entry: python -m ruff check .
         language: system
         pass_filenames: false
         always_run: true
       - id: ruff-format
         name: Ruff format check
-        entry: ruff format --check .
+        entry: python -m ruff format --check .
         language: system
         pass_filenames: false
         always_run: true
       - id: typing-fixtures
         name: Mypy and Pyright external-consumer fixtures
-        entry: scripts/check-typing-fixtures.sh
+        entry: python -m tests.check_typing_fixtures --root .
+        language: system
+        pass_filenames: false
+        always_run: true
+      - id: pytest
+        name: Repository tests
+        entry: python -m pytest -q
         language: system
         pass_filenames: false
         always_run: true
       - id: runtime-api
         name: Runtime API checks
-        entry: python tests/runtime_api.py
+        entry: python -m tests.runtime_api
         language: system
         pass_filenames: false
         always_run: true
       - id: stubtest
         name: Mypy runtime/stub compatibility
-        entry: stubtest --allowlist stubtest-allowlist.txt mdutils
+        entry: python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
         language: system
         pass_filenames: false
         always_run: true

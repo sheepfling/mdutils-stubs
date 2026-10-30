@@ -1,27 +1,52 @@
 # mdutils-stubs
 
-PEP 561 type stubs for [mdutils](https://github.com/didix21/mdutils), a Python
+PEP 561 stubs for [mdutils](https://github.com/didix21/mdutils), a Python
 library for generating Markdown files.
 
-## Supported versions
+## Compatibility
 
-The initial candidate targets exactly **mdutils 1.8.1** and Python
-**3.10–3.14**. The runtime dependency is pinned to `mdutils==1.8.1`; no wider
-runtime range is claimed. The version format follows
-`RUNTIME_MAJOR.RUNTIME_MINOR.RUNTIME_PATCH.STUB_REV`, so the first tag is
-`v1.8.1.0`. Versions are derived from Git tags with `setuptools-scm`.
+The supported runtime baseline is exactly mdutils 1.8.1. The distribution pins
+that runtime version and declares Python >=3.10,<4.0. No compatibility with
+other mdutils releases is implied.
 
-| mdutils version | Status | Evidence |
-| --- | --- | --- |
-| 1.8.1 | Initial supported baseline | Runtime source signatures and consumer fixtures |
-| 1.8.0 | Not supported yet | Source signatures match 1.8.1; full installed-wheel checks are still required before widening |
-| 1.8.2 and later | Not supported yet | Review and test each upstream release before changing the dependency bound |
+The stubs describe the public package surface and preserve package exports and
+aliases. See [API coverage](API-COVERAGE.md) for the audit scope and reproducible
+checks.
 
-The stubs cover the public package exports and classes listed in
-[API-COVERAGE.md](API-COVERAGE.md). They are based on the upstream 1.8.1 source
-tag at commit `170f7d040ea598672c53015a5db4fab868dacba0`, including its
-package-level re-exports. In that release, `mdutils.TextUtils` is the
-`TextUtils` class; `MdUtils.textUtils` stores that class object.
+## List items
+
+MDList, MDCheckbox, MdUtils.new_list, and MdUtils.new_checkbox_list accept
+string leaves and recursively nested lists. Formatting, link, and image helpers
+return strings, so their results can be used as list items. Arbitrary non-string
+objects are outside the supported contract.
+
+```python
+from mdutils import MdUtils, TextUtils
+from mdutils.tools.Image import Image
+from mdutils.tools.Link import Inline
+
+items = [
+    TextUtils.bold("Important"),
+    Inline.new_link("https://example.com", text="docs"),
+    Image.new_inline_image("diagram", "diagram.png"),
+]
+MdUtils("out").new_list(items)
+```
+
+Runtime and type-checking fixtures verify these helper-generated list entries.
+Nested entries must be actual lists; a tuple or other sequence nested within a
+list is not supported. For a separately annotated recursive variable, define a
+recursive alias so list invariance does not widen nested values to unsupported
+sequences:
+
+```python
+from mdutils import MdUtils
+from typing import TypeAlias
+
+ListItem: TypeAlias = str | list["ListItem"]
+items: list[ListItem] = ["parent", ["child", ["grandchild"]]]
+MdUtils("out").new_list(items)
+```
 
 ## Installation
 
@@ -29,53 +54,92 @@ package-level re-exports. In that release, `mdutils.TextUtils` is the
 python -m pip install mdutils-stubs
 ```
 
-The stub distribution installs alongside the runtime package and is discovered
-automatically by mypy and Pyright. This is a complete stub-only distribution,
-so it does not include a `py.typed` marker.
+The stub distribution installs alongside mdutils and is discovered automatically
+by MyPy, Pyright, and ty. It is a complete stub-only distribution, so it does not
+include a py.typed marker.
 
 ## Local checks
 
-Use Python 3.12 for the current quality baseline. In a clean environment, install
-the package and development tools, then run:
+From the repository root, install the local tools and exact target runtime
+from the `dev` and `target` dependency groups, then build and install the wheel:
 
 ```shell
-python -m pip install ".[dev]" -r requirements/compatibility.txt
+python -m pip install --upgrade pip
+python -m pip install --group dev --group target
 SETUPTOOLS_SCM_PRETEND_VERSION=1.8.1.0 python -m build
 python -m pip install --no-deps --force-reinstall dist/mdutils_stubs-*.whl
-ruff check .
-ruff format --check .
-scripts/check-typing-fixtures.sh
-python tests/runtime_api.py
-stubtest --allowlist stubtest-allowlist.txt mdutils
-twine check dist/*
+python -m ruff check .
+python -m ruff format --check .
+python -m pytest -q
+python -m tests.check_typing_fixtures --root .
+python -m tests.runtime_api
+python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
+python -m twine check dist/*
 ```
 
-The wheel is installed into the consumer environment before type checking. The
-positive fixture must pass; the negative fixture must produce diagnostics from
-both checkers. Runtime behavior tests cover signatures, re-exports, table
-alignment with `None`, marker replacement, and methods whose runtime return is
-`None`.
+These native checks select only the `dev` and `target` dependency groups. The
+optional `dev-experimental` group contains the pinned Alphus Git dependency and
+is not installed by the command above or by hosted CI. A no-index pip dry run
+of the native groups passed with Git blocked in the current validation; it
+reused the existing isolated tool environment and is not a cold-install result.
+uv resolves all declared dependency groups when creating or refreshing a
+lockfile, even when a later sync selects only `dev`; `uv lock` may therefore
+require Git access to the experimental group. uv was not available in this
+validation environment, so that behavior was not tested directly. See uv's
+[dependency-group resolution] and [automatic lock behavior] documentation.
+
+[dependency-group resolution]: https://docs.astral.sh/uv/concepts/projects/dependencies/#dependency-groups
+[automatic lock behavior]: https://docs.astral.sh/uv/concepts/projects/sync/#automatic-lock-and-sync
+
+The Python fixture entry point reads stub-quality.json into a validated
+configuration and invokes MyPy and Pyright modules plus the ty CLI without
+Alphus. It checks that fixture paths stay inside the repository,
+checks the positive fixture, and requires every expected negative diagnostic
+to remain present. Pytest covers valid and invalid configuration values.
+
+The tests package is repository tooling and is not installed in the stub wheel.
+The optional Alphus profile runs the structural API audit against the installed
+pinned runtime; the native CI suite does not import that audit. The pinned Git
+dependency lives only in `dev-experimental`; the ordinary pip setup and CI use
+only `dev` and `target`. See
+[API-COVERAGE.md](API-COVERAGE.md) for the limits and compatibility procedure.
+
+## Source policy selection
+
+[quality-gates.toml](quality-gates.toml) retains the optional `stub-package`
+source-policy profile. The default `check` profile runs the stub verifier,
+native Python lint/format checks, and native Markdown checks; any failing stage
+fails that selection. The `stub-package` profile is excluded from the default
+selection.
 
 ## Maintenance
 
-The candidate includes Dependabot configuration for a weekly check of the exact
-`mdutils` compatibility pin, with at most one version-update pull request open.
-Scheduled checks begin only after GitHub accepts this configuration in the
-repository. A Dependabot update only proposes a runtime version change; it does
-not update the stubs or establish compatibility. Before accepting a runtime
-bump, compare the upstream public API and run the full local gate against a clean
-wheel install, including mypy, Pyright, stubtest, runtime checks, and wheel/sdist
-validation. Update the supported version table and dependency bound only after
-those checks pass.
+Review each proposed mdutils version change against its public source and run
+the local API, typing, runtime, and packaging checks before widening the
+compatibility pin. A dependency update by itself does not establish stub
+compatibility.
 
-The candidate defines one lightweight verification workflow after a pull
-request is merged, plus manual dispatch. Local checks are the pre-merge gate.
-There is no push-triggered or pull-request-opened workflow and no package
-publication job.
+There is no package publication job. Merging or publishing remains a separate
+release decision.
 
 ## Attribution and license
 
-These declarations describe the public API of the MIT-licensed
-[didix21/mdutils](https://github.com/didix21/mdutils), specifically its
-[`v1.8.1` source](https://github.com/didix21/mdutils/tree/v1.8.1). The stub
-package does not copy the upstream runtime implementation. See [LICENSE](LICENSE).
+These declarations describe the public API of MIT-licensed
+[didix21/mdutils](https://github.com/didix21/mdutils). The stub package does not
+copy the upstream runtime implementation. See [LICENSE](LICENSE).
+
+### Optional Alphus verification
+
+Alphus is an experimental maintainer verifier and is not installed by consumers
+of `mdutils-stubs` or included in project dependency groups. Its direct Git
+install, target-environment commands and profile selection are documented in
+[ALPHUS-VERIFICATION.md](docs/ALPHUS-VERIFICATION.md).
+
+The hosted workflow does not install or call Alphus until it is published on
+PyPI. Its native checks run on Python targets 3.10–3.15, including the installed
+wheel, positive and expected-negative typing fixtures, pytest runtime probe,
+native stubtest, and package build. Python 3.15 is included as a compatibility
+target. A local CPython 3.15.2 check also passed the installed-wheel consumer
+typing fixtures and runtime API check against mdutils 1.8.1; this does not
+establish a hosted matrix run, change support metadata, or prove every runtime
+behavior.

@@ -1,61 +1,82 @@
-# API coverage and compatibility notes
+# API coverage and compatibility
 
-This inventory is for the first candidate, based on the official
-[`didix21/mdutils` v1.8.1 source tag](https://github.com/didix21/mdutils/tree/v1.8.1)
-at commit `170f7d040ea598672c53015a5db4fab868dacba0`. The type declarations
-describe API shape only; they do not reimplement mdutils.
+This document describes the audit contract and how to run it. The executable
+tests are the source of API completeness checks; this file does not duplicate a
+member-by-member snapshot or manually maintained totals.
 
-## Exported modules and classes
+## Supported baseline
 
-The root `mdutils` package exposes `MdUtils`, the `Header`, `Image`, `Link`,
-`Table`, and `TableOfContents` modules, the `fileutils` module, and the
-`TextUtils`, `Html`, and `MDList` classes. The `mdutils.tools` package exposes
-the upstream module/class aliases, including `TextUtils` as a class. The
-`mdutils.fileutils` package exposes `MarkDownFile`.
+The current runtime baseline is mdutils 1.8.1. The audit is based on the
+upstream public [v1.8.1 source](https://github.com/didix21/mdutils/tree/v1.8.1),
+commit 170f7d040ea598672c53015a5db4fab868dacba0. The installed runtime version
+is checked against this exact baseline. Other releases are not included in the
+compatibility claim.
 
-## Declared public surface
+## Audit scope
 
-- `mdutils.mdutils.MdUtils`: constructor, public state (`file_name`, `author`,
-  `textUtils`, `title`, `table_of_contents`, `file_data_text`, `reference`, and
-  `image`), and every public method: `create_md_file`, `get_md_text`,
-  `read_md_file`, `new_header`, `new_table_of_contents`, `new_table`,
-  `new_table_array`, `new_paragraph`, `new_line`, `write`, `insert_code`,
-  `create_marker`, `place_text_using_marker`, `new_inline_link`,
-  `new_reference_link`, `new_inline_image`, `new_reference_image`, `new_list`,
-  and `new_checkbox_list`.
-- `mdutils.fileutils.fileutils.MarkDownFile`: constructor, file metadata, write
-  and append methods, and static `read_file`.
-- `mdutils.tools.Header`: `Header`, `HeaderStyle`, `AtxHeaderLevel`, and
-  `SetextHeaderLevel`, including all enum members and public constructors,
-  formatters, and anchor helpers.
-- `mdutils.tools.Html`: `Html`, `HtmlSize`, and `SizeBadFormat`, including
-  paragraph/image formatting and size conversion.
-- `mdutils.tools.Image`: constructor and inline/reference image methods.
-- `mdutils.tools.Link`: `Inline` and `Reference`, including reference lookup,
-  Markdown formatting, and link creation.
-- `mdutils.tools.MDList`: `MDListHelper`, `MDList`, and `MDCheckbox`, including
-  list state and Markdown output.
-- `mdutils.tools.Table`: `Table`, its row/column state, and both table builders.
-- `mdutils.tools.TableOfContents`: recursive heading-tree input and table of
-  contents generation.
-- `mdutils.tools.TextUtils`: every public static text-formatting helper.
+The version-specific audit manifest in tests/api_coverage.py identifies
+runtime modules, package exports, and re-export targets. The test discovers the
+actual installed runtime and compares that scope with the stub tree. It checks:
 
-## Deliberate gaps
+- one-to-one runtime module and stub module coverage;
+- public definitions, class bases, callable names and signature shape;
+- public class attributes and enum members;
+- package exports and aliases against both the runtime and stubs;
+- complete annotations on public stub callables; and
+- typed fixture calls for the exported API.
 
-- Runtime-private names beginning with `_` are not declared.
-- Only mdutils 1.8.1 is in the supported dependency range. The 1.8.0 source tag
-  has matching public signatures, but it is not supported until the complete
-  installed-wheel consumer and runtime checks pass against that release.
-- Future 1.8.x releases are not presumed compatible. Dependabot raises a bounded
-  update proposal; API coverage and metadata are revised only after validation.
-- No historical support for 1.6.x or 1.7.x is claimed. Those API lines differ
-  from 1.8.1 and need separate evidence and release decisions.
-- Python versions below 3.10 are not claimed for this stub distribution.
+A runtime change fails the audit until the corresponding stub and the
+version-specific manifest are deliberately reviewed. The checks derive the
+compared names and signatures from the installed source rather than relying on
+documentation counts.
 
-## Local compatibility gate
+## Behavioral and consumer checks
 
-The external consumer fixtures exercise the root and submodule imports,
-constructors, header options, list/table inputs, alignment `None`, markers,
-reference defaults, and return values. The runtime checks and `stubtest` compare
-the installed declarations with mdutils 1.8.1. The package dependency and exact
-test pin stay at 1.8.1 until the full gate supports a wider range.
+tests/fixtures/positive.py imports package exports and exercises public
+callables for MyPy, Pyright, and ty. tests/fixtures/negative.py covers invalid
+arguments and rejects non-string nested list leaves. The typing runner requires
+all three checkers to accept the positive fixture and to emit the expected
+diagnostics for the negative fixture.
+
+The runtime checks cover selected behavior such as recursive lists and tables
+of contents, file operations, and helper-produced Markdown strings used as
+list leaves. Strict stubtest compares an installed stub wheel with the pinned
+runtime. Structural parity, typing fixtures, runtime examples, and stubtest
+provide distinct evidence; together they are still not a proof of every
+possible runtime behavior.
+
+For list input, the supported leaf contract is str. MDList and MDCheckbox also
+accept recursive lists of those strings. Text formatting, inline link, and
+image helpers return strings, so those results satisfy the same contract.
+Non-string objects are not modeled as list leaves.
+
+The upstream `MDList` and `MDCheckbox` docstrings describe `items` as `[str]`,
+while their implementations also recurse into nested lists. The stubs model
+that nested-list behavior. Non-string leaves remain unsupported: the runtime
+passes each leaf to string methods such as `startswith`.
+
+## Run the audit
+
+Run these commands from the repository root with mdutils 1.8.1 and the
+development dependencies installed. Install the built wheel in the environment
+before running consumer checks so import resolution exercises the distribution:
+
+```shell
+python -m pytest -q
+python -m tests.check_typing_fixtures
+python -m tests.runtime_api
+python -m mypy.stubtest --allowlist stubtest-allowlist.txt mdutils
+```
+
+The optional Alphus profile runs the API audit against the selected stub tree
+and installed runtime. The native pytest suite exercises the runtime module;
+the typing runner invokes each checker without a shell and verifies the exact
+expected negative fixture diagnostics.
+
+## Updating the baseline
+
+When changing the supported mdutils release, review the upstream API and source
+reference, runtime dependency pin, module/export manifest, stubs, fixtures, and
+runtime cases as one change. Run the installed-wheel checks on the candidate
+before widening compatibility. Python support and distribution metadata remain
+declared in pyproject.toml.
