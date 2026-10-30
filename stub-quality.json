@@ -4,7 +4,7 @@
     "stubtest_allowlist": "stubtest-allowlist.txt",
     "positive_fixture": "tests/fixtures/positive.py",
     "negative_fixture": "tests/fixtures/negative.py",
-    "negative_expected_count": 7,
+    "negative_expected_count": 11,
     "typing_checkers": [
       "mypy",
       "pyright"
