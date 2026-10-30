@@ -28,7 +28,7 @@ alphus --root . --config quality-gates.toml --run --profile stub-package
 
 For installed-consumer verification, `alphus-stub-quality` builds and installs
 the stub wheel in a distinct target environment while its checker and MyPy /
-Pyright remain in the checker environment:
+Pyright / ty remain in the checker environment:
 
 ```sh
 alphus-stub-quality --root . --config stub-quality.json --with-twine

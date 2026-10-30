@@ -34,6 +34,7 @@ dev = [
     "pytest>=7.4",
     "ruff>=0.16",
     "rumdl>=0.2.77",
+    "ty>=0.0.95",
     "twine>=7.0",
     "typing_extensions>=4.0",
 ]

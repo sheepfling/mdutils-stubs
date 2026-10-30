@@ -7,7 +7,8 @@
     "negative_expected_count": 15,
     "typing_checkers": [
       "mypy",
-      "pyright"
+      "pyright",
+      "ty"
     ],
     "mypy_diagnostics": [
       "Argument \"file_name\"",
@@ -26,6 +27,11 @@
       "parameter \"text_align\"",
       "parameter \"items\" of type \"Sequence[_ListItem]\"",
       "parameter \"text\" of type \"str\""
+    ],
+    "ty_diagnostics": [
+      "Expected `str`, found `Literal[42]`",
+      "Expected `Sequence[_ListItem]`, found `list[int]`",
+      "Expected `Sequence[_ListItem]`, found `list[str | tuple[str]]`"
     ],
     "api_audit_module": "tests.api_coverage",
     "api_audit_args": [

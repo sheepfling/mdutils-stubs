@@ -55,7 +55,7 @@ python -m pip install mdutils-stubs
 ```
 
 The stub distribution installs alongside mdutils and is discovered automatically
-by mypy and Pyright. It is a complete stub-only distribution, so it does not
+by MyPy, Pyright, and ty. It is a complete stub-only distribution, so it does not
 include a py.typed marker.
 
 ## Local checks
@@ -92,8 +92,8 @@ validation environment, so that behavior was not tested directly. See uv's
 [automatic lock behavior]: https://docs.astral.sh/uv/concepts/projects/sync/#automatic-lock-and-sync
 
 The Python fixture entry point reads stub-quality.json into a validated
-configuration and invokes native MyPy and Pyright modules without shell
-commands or Alphus. It checks that fixture paths stay inside the repository,
+configuration and invokes MyPy and Pyright modules plus the ty CLI without
+Alphus. It checks that fixture paths stay inside the repository,
 checks the positive fixture, and requires every expected negative diagnostic
 to remain present. Pytest covers valid and invalid configuration values.
 

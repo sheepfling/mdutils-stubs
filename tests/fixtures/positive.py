@@ -77,36 +77,36 @@ document: MdUtils = MdUtils(
 
 _ListItem: TypeAlias = str | list["_ListItem"]
 assert_type(document, MdUtils)
-assert_type(MdUtils, type[MdUtils])
-assert_type(MDList, type[MDList])
-assert_type(TextUtils, type[TextUtils])
-assert_type(Header.Header, type[HeaderClass])
-assert_type(Image.Image, type[ImageClass])
-assert_type(Link.Inline, type[Inline])
-assert_type(Link.Reference, type[Reference])
-assert_type(Table.Table, type[TableClass])
-assert_type(TableOfContents.TableOfContents, type[TOCClass])
-assert_type(fileutils.MarkDownFile, type[MarkDownFile])
-assert_type(RootMdUtilsModule.MdUtils, type[MdUtils])
-assert_type(RootToolsModule.TextUtils, type[TextUtilsClass])
-assert_type(FileUtilsModule.MarkDownFile, type[MarkDownFile])
-assert_type(ToolsHeaderModule.Header, type[HeaderClass])
-assert_type(ToolsImageModule.Image, type[ImageClass])
-assert_type(ToolsLinkModule.Inline, type[Inline])
-assert_type(ToolsLinkModule.Reference, type[Reference])
-assert_type(ToolsTableModule.Table, type[TableClass])
-assert_type(ToolsTableOfContentsModule.TableOfContents, type[TOCClass])
-assert_type(Html, type[Html])
-assert_type(HtmlClass, type[HtmlClass])
-assert_type(ToolsHtml, type[ToolsHtml])
-assert_type(ToolsMDList, type[ToolsMDList])
-assert_type(Inline, type[Inline])
-assert_type(MDCheckbox, type[MDCheckbox])
-assert_type(SizeBadFormat, type[SizeBadFormat])
-assert_type(ToolsTextUtils, type[ToolsTextUtils])
-assert_type(document.textUtils, type[TextUtilsClass])
-assert_type(mdutils.TextUtils, type[TextUtilsClass])
-assert_type(ToolsTextUtils, type[TextUtilsClass])
+_mdutils_class: type[MdUtils] = MdUtils
+_mdlist_class: type[MDList] = MDList
+_text_utils_class: type[TextUtils] = TextUtils
+_header_class: type[HeaderClass] = Header.Header
+_image_class: type[ImageClass] = Image.Image
+_inline_class: type[Inline] = Link.Inline
+_reference_class: type[Reference] = Link.Reference
+_table_class: type[TableClass] = Table.Table
+_toc_class: type[TOCClass] = TableOfContents.TableOfContents
+_mark_down_file_class: type[MarkDownFile] = fileutils.MarkDownFile
+_root_mdutils_class: type[MdUtils] = RootMdUtilsModule.MdUtils
+_root_text_utils_class: type[TextUtilsClass] = RootToolsModule.TextUtils
+_file_module_class: type[MarkDownFile] = FileUtilsModule.MarkDownFile
+_tools_header_class: type[HeaderClass] = ToolsHeaderModule.Header
+_tools_image_class: type[ImageClass] = ToolsImageModule.Image
+_tools_inline_class: type[Inline] = ToolsLinkModule.Inline
+_tools_reference_class: type[Reference] = ToolsLinkModule.Reference
+_tools_table_class: type[TableClass] = ToolsTableModule.Table
+_tools_toc_class: type[TOCClass] = ToolsTableOfContentsModule.TableOfContents
+_html_class: type[Html] = Html
+_html_module_class: type[HtmlClass] = HtmlClass
+_tools_html_class: type[ToolsHtml] = ToolsHtml
+_tools_mdlist_class: type[ToolsMDList] = ToolsMDList
+_link_class: type[Inline] = Inline
+_checkbox_class: type[MDCheckbox] = MDCheckbox
+_size_error_class: type[SizeBadFormat] = SizeBadFormat
+_tools_text_utils_class: type[ToolsTextUtils] = ToolsTextUtils
+_instance_text_utils_class: type[TextUtilsClass] = document.textUtils
+_root_text_utils_alias: type[TextUtilsClass] = mdutils.TextUtils
+_tools_text_utils_alias: type[TextUtilsClass] = ToolsTextUtils
 assert_type(document.new_header(2, "Section", "atx", "y", "section"), str)
 assert_type(document.new_table_of_contents("Contents", depth=2, marker="toc"), str)
 assert_type(document.new_table(2, 2, ["A", "B", "1", "2"], text_align=["left", None]), str)
